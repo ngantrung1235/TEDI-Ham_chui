@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Ham_chui</Name>
+    <Assembly>TEDI-Ham_Chui\TEDI-Ham_chui.dll</Assembly>
+    <AddInId>869CE4B5-AEA6-4DB4-9F30-AC6FF346858D</AddInId>
+    <FullClassName>TEDI_Ham_chui.MainClass</FullClassName>
+    <VendorId>abcd</VendorId>
+    <VendorDescription>278 Ton Duc Thang</VendorDescription>
+  </AddIn>
+</RevitAddIns>

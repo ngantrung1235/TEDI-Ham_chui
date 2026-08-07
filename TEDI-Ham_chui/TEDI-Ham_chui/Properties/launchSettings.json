@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "TEDI-Ham_chui": {
+      "commandName": "Project"
+    },
+    "Run": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Autodesk\\Revit 2027\\Revit.exe"
+    }
+  }
+}
