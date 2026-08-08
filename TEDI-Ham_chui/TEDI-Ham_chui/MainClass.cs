@@ -26,16 +26,7 @@ namespace TEDI_Ham_chui
 
                 PushButton pushButton = ribbonPanel.AddItem(buttonData) as PushButton;
 
-                // Optionally, other properties may be assigned to the button
-                // a) tool-tip
-                pushButton.ToolTip = "Say hello to the entire world.";
-
-                // b) large bitmap
-                string stampIconPath = Path.Combine(assemblyDir, "Assets", "icons", "stamp32.png");
-                Uri uriImage = new Uri(stampIconPath);
-                BitmapImage largeImage = new BitmapImage(uriImage);
-                pushButton.LargeImage = largeImage;
-
+                
 
                 return Result.Succeeded;
             }
