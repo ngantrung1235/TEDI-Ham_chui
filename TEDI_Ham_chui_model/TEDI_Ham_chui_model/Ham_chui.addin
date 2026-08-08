@@ -2,9 +2,9 @@
 <RevitAddIns>
   <AddIn Type="Application">
     <Name>Ham_chui</Name>
-    <Assembly>TEDI-Ham_Chui\TEDI-Ham_chui.dll</Assembly>
-    <AddInId>869CE4B5-AEA6-4DB4-9F30-AC6FF346858D</AddInId>
-    <FullClassName>TEDI_Ham_chui.MainClass</FullClassName>
+    <Assembly>TEDI-Ham_Chui_model\TEDI_Ham_chui_model.dll</Assembly>
+    <AddInId>E345078F-EBC6-4BEC-8759-9F9152A060F4</AddInId>
+	  <FullClassName>TEDI_Ham_chui_model.MainClass</FullClassName>
     <VendorId>THINHTQ</VendorId>
     <VendorDescription>278 Ton Duc Thang</VendorDescription>
   </AddIn>
