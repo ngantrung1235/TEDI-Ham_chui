@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
 using TEDI_Ham_chui.Views;
 using System;
@@ -16,9 +16,21 @@ namespace TEDI_Ham_chui.ExternalCommands
         {
             try
             {
-                
-                Window1 viewBoctach=new Window1();
-                viewBoctach.Show();
+                // Khởi tạo ViewModel
+                var viewModel = new TEDI_Ham_chui.ViewModels.Window1ViewModel();
+
+                // Gán ViewModel vào DataContext của giao diện
+                Window1 viewBoctach = new Window1();
+                viewBoctach.DataContext = viewModel;
+
+                // Mở cửa sổ dạng Modal (bắt buộc để có thể PickPoint sau khi đóng)
+                bool? result = viewBoctach.ShowDialog();
+
+                if (result == true)
+                {
+                    // Thực thi logic Revit API từ ViewModel
+                    viewModel.PlaceFamilyInRevit(commandData.Application.ActiveUIDocument);
+                }
 
                 return Result.Succeeded;
             }
