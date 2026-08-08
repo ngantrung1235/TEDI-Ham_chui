@@ -12,7 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace TEDI_Ham_chui.Views
+namespace TEDI_Ham_chui_model.Views
 {
     /// <summary>
     /// Interaction logic for Window1.xaml

@@ -2,7 +2,7 @@ using Autodesk.Revit.UI;
 using System.Reflection;
 using System.Windows.Media.Imaging;
 using System.IO;
-namespace TEDI_Ham_chui
+namespace TEDI_Ham_chui_model
 {
     
         public class MainClass : IExternalApplication
@@ -22,7 +22,7 @@ namespace TEDI_Ham_chui
                 string assemblyDir = Path.GetDirectoryName(thisAssemblyPath);
 
                 PushButtonData buttonData = new PushButtonData("cmdTaotho",
-                   "Tạo thô", thisAssemblyPath, "TEDI_Ham_chui.ExternalCommands.Tao_tho");
+                   "Tạo thô", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.Tao_tho");
 
                 PushButton pushButton = ribbonPanel.AddItem(buttonData) as PushButton;
 

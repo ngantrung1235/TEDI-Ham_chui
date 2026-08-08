@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace TEDI_Ham_chui.ViewModels
+namespace TEDI_Ham_chui_model.ViewModels
 {
     public class RelayCommand : ICommand
     {

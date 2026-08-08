@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace TEDI_Ham_chui.ViewModels
+namespace TEDI_Ham_chui_model.ViewModels
 {
     public class ViewModelBase : INotifyPropertyChanged
     {
