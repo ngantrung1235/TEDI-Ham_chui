@@ -18,13 +18,15 @@ namespace TEDI_Ham_chui_model.Models
     public class ParameterRow : ViewModelBase
     {
         public string ParameterName { get; set; }
+        public string Unit { get; set; }
         
         // Danh sách các giá trị tương ứng với từng cột (từng file nhân bản)
         public ObservableCollection<ParameterValue> Values { get; set; }
 
-        public ParameterRow(string name)
+        public ParameterRow(string name, string unit = "")
         {
             ParameterName = name;
+            Unit = unit;
             Values = new ObservableCollection<ParameterValue>();
         }
     }

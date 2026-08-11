@@ -1,0 +1,157 @@
+<Window x:Class="TEDI_Ham_chui_model.Views.Input"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Batch Process RVT" Height="700" Width="900"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Path Selectors -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="80"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Thư mục lưu:" Grid.Row="0" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OutputDirectory}" IsReadOnly="True" Margin="5"/>
+            <Button Grid.Row="0" Grid.Column="2" Content="Chọn" Command="{Binding SelectOutputDirCommand}" Margin="5"/>
+        </Grid>
+
+        <!-- Dynamic Columns Toolbar -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="Thêm" Command="{Binding AddColumnCommand}" Width="120" Height="30" Margin="0,0,10,0"/>
+            <Button Content="Xóa" Command="{Binding RemoveColumnCommand}" Width="120" Height="30"/>
+        </StackPanel>
+
+        <!-- Main Data Table -->
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="0,5,0,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Column (Row Headers) -->
+                <Border Grid.Column="0" BorderBrush="Black" BorderThickness="1,1,1,1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="90" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Header spacing: 3 rows to match the right side -->
+                        <Grid Grid.Row="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="30" />
+                                <RowDefinition Height="30" />
+                                <RowDefinition Height="30" />
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" BorderBrush="Black" BorderThickness="0,0,0,1" Background="LightGray" />
+                            <Border Grid.Row="1" BorderBrush="Black" BorderThickness="0,0,0,1" Background="LightGray" />
+                            <Border Grid.Row="2" BorderBrush="Black" BorderThickness="0,0,0,1" Background="LightGray">
+                                <TextBlock Text="Tên file" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Margin="10,0"/>
+                            </Border>
+                        </Grid>
+                        
+                        <ItemsControl Grid.Row="1" ItemsSource="{Binding FileHeaders}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Height="30" BorderBrush="Black" BorderThickness="0,0,0,1" Background="LightGray">
+                                        <TextBlock Text="{Binding}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="10,0"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+
+                <!-- Right Column (Data Columns) -->
+                <Border Grid.Column="1" BorderBrush="Black" BorderThickness="0,1,1,1">
+                    <ItemsControl ItemsSource="{Binding TypeGroups}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="30" /> <!-- Type Name -->
+                                        <RowDefinition Height="*" /> <!-- Parameters and Values -->
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Type Name Header -->
+                                    <Border Grid.Row="0" BorderBrush="Black" BorderThickness="0,0,1,1" Background="LightGray">
+                                        <TextBlock Text="{Binding TypeName}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
+                                    </Border>
+
+                                    <!-- Parameters -->
+                                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Parameters}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="Black" BorderThickness="0,0,1,0" Width="80">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="30" /> <!-- Parameter Name -->
+                                                            <RowDefinition Height="30" /> <!-- Unit -->
+                                                            <RowDefinition Height="*" /> <!-- Values -->
+                                                        </Grid.RowDefinitions>
+
+                                                        <Border Grid.Row="0" BorderBrush="Black" BorderThickness="0,0,0,1" Background="LightGray">
+                                                            <TextBlock Text="{Binding ParameterName}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"/>
+                                                        </Border>
+
+                                                        <Border Grid.Row="1" BorderBrush="Black" BorderThickness="0,0,0,1" Background="WhiteSmoke">
+                                                            <TextBlock Text="{Binding Unit}" HorizontalAlignment="Center" VerticalAlignment="Center" FontStyle="Italic" FontSize="11"/>
+                                                        </Border>
+
+                                                        <ItemsControl Grid.Row="2" ItemsSource="{Binding Values}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Border BorderBrush="Black" BorderThickness="0,0,0,1" Height="30">
+                                                                        <TextBox Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}" 
+                                                                                 BorderThickness="0" 
+                                                                                 VerticalContentAlignment="Center" 
+                                                                                 HorizontalContentAlignment="Center"/>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Hủy" Command="{Binding CancelCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" Width="100" Height="35" Margin="0,0,10,0"/>
+            <Button Content="Tạo (Nhân Bản)" Command="{Binding CreateCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" Width="150" Height="35" Background="DarkSeaGreen" FontWeight="Bold"/>
+        </StackPanel>
+    </Grid>
+</Window>

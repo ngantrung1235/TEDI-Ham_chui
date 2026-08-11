@@ -11,7 +11,7 @@ using TEDI_Ham_chui_model.Models;
 
 namespace TEDI_Ham_chui_model.ViewModels
 {
-    public class Window1ViewModel : ViewModelBase
+    public class InputViewModel : ViewModelBase
     {
         public ObservableCollection<TypeGroup> TypeGroups { get; set; }
         public ObservableCollection<string> FileHeaders { get; set; }
@@ -29,7 +29,7 @@ namespace TEDI_Ham_chui_model.ViewModels
         public ICommand CreateCommand { get; }
         public ICommand CancelCommand { get; }
 
-        public Window1ViewModel()
+        public InputViewModel()
         {
             TypeGroups = new ObservableCollection<TypeGroup>();
             FileHeaders = new ObservableCollection<string>();
@@ -50,87 +50,87 @@ namespace TEDI_Ham_chui_model.ViewModels
 
             // 1. FamilyCongHamChui-HT (6 parameters)
             var g1 = new TypeGroup("FamilyCongHamChui-HT");
-            g1.Parameters.Add(CreateRow("Chamfer"));
-            g1.Parameters.Add(CreateRow("Height_N"));
-            g1.Parameters.Add(CreateRow("Height_T"));
-            g1.Parameters.Add(CreateRow("W_Go"));
-            g1.Parameters.Add(CreateRow("Width_N"));
-            g1.Parameters.Add(CreateRow("Width_T"));
-            g1.Parameters.Add(CreateRow("l_tai"));
+            g1.Parameters.Add(CreateRow("Chamfer", "mm"));
+            g1.Parameters.Add(CreateRow("Height_N", "mm"));
+            g1.Parameters.Add(CreateRow("Height_T", "mm"));
+            g1.Parameters.Add(CreateRow("W_Go", "mm"));
+            g1.Parameters.Add(CreateRow("Width_N", "mm"));
+            g1.Parameters.Add(CreateRow("Width_T", "mm"));
+            g1.Parameters.Add(CreateRow("l_tai", "%"));
             TypeGroups.Add(g1);
 
             // 2. TuongCanhPhai 1 (3 parameters)
             var g2 = new TypeGroup("TuongCanhPhai 1");
-            g2.Parameters.Add(CreateRow("Heigth"));
-            g2.Parameters.Add(CreateRow("Length"));
-            g2.Parameters.Add(CreateRow("Radius"));
+            g2.Parameters.Add(CreateRow("Heigth", "mm"));
+            g2.Parameters.Add(CreateRow("Length", "mm"));
+            g2.Parameters.Add(CreateRow("Radius", "độ"));
             TypeGroups.Add(g2);
 
             // 3. TuongCanhPhai 2 (3 parameters)
             var g3 = new TypeGroup("TuongCanhPhai 2");
-            g3.Parameters.Add(CreateRow("Heigth"));
-            g3.Parameters.Add(CreateRow("Length"));
-            g3.Parameters.Add(CreateRow("Radius"));
+            g3.Parameters.Add(CreateRow("Heigth", "mm"));
+            g3.Parameters.Add(CreateRow("Length", "mm"));
+            g3.Parameters.Add(CreateRow("Radius", "độ"));
             TypeGroups.Add(g3);
 
             // 6. BanQuaDoPhai 1 (4 parameters)
             var g6 = new TypeGroup("BanQuaDoPhai 1");
-            g6.Parameters.Add(CreateRow("BeDay"));
-            g6.Parameters.Add(CreateRow("H1"));
-            g6.Parameters.Add(CreateRow("H3"));
-            g6.Parameters.Add(CreateRow("W_Go"));
-            g6.Parameters.Add(CreateRow("l_tai"));
+            g6.Parameters.Add(CreateRow("BeDay", "mm"));
+            g6.Parameters.Add(CreateRow("H1", "mm"));
+            g6.Parameters.Add(CreateRow("H3", "mm"));
+            g6.Parameters.Add(CreateRow("W_Go", "mm"));
+            g6.Parameters.Add(CreateRow("l_tai", "%"));
             TypeGroups.Add(g6);
 
             // 7. BanQuaDoPhai 2 (4 parameters)
             var g7 = new TypeGroup("BanQuaDoPhai 2");
-            g7.Parameters.Add(CreateRow("BeDay"));
-            g7.Parameters.Add(CreateRow("H1"));
-            g7.Parameters.Add(CreateRow("H3"));
-            g7.Parameters.Add(CreateRow("W_Go"));
-            g7.Parameters.Add(CreateRow("l_tai"));
+            g7.Parameters.Add(CreateRow("BeDay", "mm"));
+            g7.Parameters.Add(CreateRow("H1", "mm"));
+            g7.Parameters.Add(CreateRow("H3", "mm"));
+            g7.Parameters.Add(CreateRow("W_Go", "mm"));
+            g7.Parameters.Add(CreateRow("l_tai", "%"));
             TypeGroups.Add(g7);
 
             // 8. BanQuaDoTrai 1 (4 parameters)
             var g8 = new TypeGroup("BanQuaDoTrai 1");
-            g8.Parameters.Add(CreateRow("BeDay"));
-            g8.Parameters.Add(CreateRow("H1"));
-            g8.Parameters.Add(CreateRow("H3"));
-            g8.Parameters.Add(CreateRow("W_Go"));
-            g8.Parameters.Add(CreateRow("l_tai"));
+            g8.Parameters.Add(CreateRow("BeDay", "mm"));
+            g8.Parameters.Add(CreateRow("H1", "mm"));
+            g8.Parameters.Add(CreateRow("H3", "mm"));
+            g8.Parameters.Add(CreateRow("W_Go", "mm"));
+            g8.Parameters.Add(CreateRow("l_tai", "%"));
             TypeGroups.Add(g8);
 
             // 9. BanQuaDoTrai 2 (4 parameters)
             var g9 = new TypeGroup("BanQuaDoTrai 2");
-            g9.Parameters.Add(CreateRow("BeDay"));
-            g9.Parameters.Add(CreateRow("H1"));
-            g9.Parameters.Add(CreateRow("H3"));
-            g9.Parameters.Add(CreateRow("W_Go"));
-            g9.Parameters.Add(CreateRow("l_tai"));
+            g9.Parameters.Add(CreateRow("BeDay", "mm"));
+            g9.Parameters.Add(CreateRow("H1", "mm"));
+            g9.Parameters.Add(CreateRow("H3", "mm"));
+            g9.Parameters.Add(CreateRow("W_Go", "mm"));
+            g9.Parameters.Add(CreateRow("l_tai", "%"));
             TypeGroups.Add(g9);
 
             // 10. TuongCanhTrai 1 - nhóm 2 (5 parameters)
             var g10 = new TypeGroup("TuongCanhTrai 1");
-            g10.Parameters.Add(CreateRow("Hw"));
-            g10.Parameters.Add(CreateRow("Hw2"));
-            g10.Parameters.Add(CreateRow("Lw1"));
-            g10.Parameters.Add(CreateRow("Lw"));
-            g10.Parameters.Add(CreateRow("Radius"));
+            g10.Parameters.Add(CreateRow("Hw", "mm"));
+            g10.Parameters.Add(CreateRow("Hw2", "mm"));
+            g10.Parameters.Add(CreateRow("Lw1", "mm"));
+            g10.Parameters.Add(CreateRow("Lw", "mm"));
+            g10.Parameters.Add(CreateRow("Radius", "độ"));
             TypeGroups.Add(g10);
 
             // 11. TuongCanhTrai 2 - nhóm 2 (5 parameters)
             var g11 = new TypeGroup("TuongCanhTrai 2");
-            g11.Parameters.Add(CreateRow("Hw"));
-            g11.Parameters.Add(CreateRow("Hw2"));
-            g11.Parameters.Add(CreateRow("Lw1"));
-            g11.Parameters.Add(CreateRow("Lw"));
-            g11.Parameters.Add(CreateRow("Radius"));
+            g11.Parameters.Add(CreateRow("Hw", "mm"));
+            g11.Parameters.Add(CreateRow("Hw2", "mm"));
+            g11.Parameters.Add(CreateRow("Lw1", "mm"));
+            g11.Parameters.Add(CreateRow("Lw", "mm"));
+            g11.Parameters.Add(CreateRow("Radius", "độ"));
             TypeGroups.Add(g11);
         }
 
-        private ParameterRow CreateRow(string paramName)
+        private ParameterRow CreateRow(string paramName, string unit = "")
         {
-            var row = new ParameterRow(paramName);
+            var row = new ParameterRow(paramName, unit);
             // Default 1 column
             row.Values.Add(new TEDI_Ham_chui_model.Models.ParameterValue { ValueText = "" });
             return row;

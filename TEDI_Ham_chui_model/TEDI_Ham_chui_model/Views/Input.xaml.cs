@@ -15,11 +15,11 @@ using System.Windows.Shapes;
 namespace TEDI_Ham_chui_model.Views
 {
     /// <summary>
-    /// Interaction logic for Window1.xaml
+    /// Interaction logic for Input.xaml
     /// </summary>
-    public partial class Window1 : Window
+    public partial class Input : Window
     {
-        public Window1()
+        public Input()
         {
             InitializeComponent();
         }
