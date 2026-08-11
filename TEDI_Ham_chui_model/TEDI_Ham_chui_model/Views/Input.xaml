@@ -30,7 +30,8 @@
         <!-- Dynamic Columns Toolbar -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="Thêm" Command="{Binding AddColumnCommand}" Width="120" Height="30" Margin="0,0,10,0"/>
-            <Button Content="Xóa" Command="{Binding RemoveColumnCommand}" Width="120" Height="30"/>
+            <Button Content="Xóa" Command="{Binding RemoveColumnCommand}" Width="120" Height="30" Margin="0,0,10,0"/>
+            <Button Content="Nhập từ Excel" Command="{Binding ImportExcelCommand}" Width="120" Height="30"/>
         </StackPanel>
 
         <!-- Main Data Table -->
@@ -151,7 +152,7 @@
         <!-- Action Buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="Hủy" Command="{Binding CancelCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" Width="100" Height="35" Margin="0,0,10,0"/>
-            <Button Content="Tạo (Nhân Bản)" Command="{Binding CreateCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" Width="150" Height="35" Background="DarkSeaGreen" FontWeight="Bold"/>
+            <Button Content="Tạo" Command="{Binding CreateCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" Width="150" Height="35" Background="DarkSeaGreen" FontWeight="Bold"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -8,6 +8,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Microsoft.Win32;
 using TEDI_Ham_chui_model.Models;
+using ClosedXML.Excel;
 
 namespace TEDI_Ham_chui_model.ViewModels
 {
@@ -26,6 +27,7 @@ namespace TEDI_Ham_chui_model.ViewModels
         public ICommand SelectOutputDirCommand { get; }
         public ICommand AddColumnCommand { get; }
         public ICommand RemoveColumnCommand { get; }
+        public ICommand ImportExcelCommand { get; }
         public ICommand CreateCommand { get; }
         public ICommand CancelCommand { get; }
 
@@ -37,6 +39,7 @@ namespace TEDI_Ham_chui_model.ViewModels
             SelectOutputDirCommand = new RelayCommand(ExecuteSelectOutputDir);
             AddColumnCommand = new RelayCommand(ExecuteAddColumn);
             RemoveColumnCommand = new RelayCommand(ExecuteRemoveColumn, CanExecuteRemoveColumn);
+            ImportExcelCommand = new RelayCommand(ExecuteImportExcel);
             CreateCommand = new RelayCommand(ExecuteCreate, CanExecuteCreate);
             CancelCommand = new RelayCommand(ExecuteCancel);
 
@@ -177,6 +180,68 @@ namespace TEDI_Ham_chui_model.ViewModels
                     {
                         param.Values.RemoveAt(lastIndex);
                     }
+                }
+            }
+        }
+
+        private void ExecuteImportExcel(object obj)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Excel Files (*.xlsx)|*.xlsx",
+                Title = "Chọn file dữ liệu Excel"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    using (var workbook = new XLWorkbook(dialog.FileName))
+                    {
+                        var worksheet = workbook.Worksheet(1);
+                        int lastRowUsed = worksheet.LastRowUsed()?.RowNumber() ?? 0;
+                        
+                        if (lastRowUsed < 4)
+                        {
+                            MessageBox.Show("File Excel không có dữ liệu ở các dòng hợp lệ (từ dòng 4 trở đi).", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        // Xóa các cột hiện tại
+                        FileHeaders.Clear();
+                        foreach (var group in TypeGroups)
+                        {
+                            foreach (var param in group.Parameters)
+                            {
+                                param.Values.Clear();
+                            }
+                        }
+
+                        int copyIndex = 1;
+                        for (int row = 4; row <= lastRowUsed; row++)
+                        {
+                            bool isEmptyRow = worksheet.Row(row).IsEmpty();
+                            if (isEmptyRow) continue;
+
+                            FileHeaders.Add($"Bản sao {copyIndex}");
+                            
+                            int colIndex = 1;
+                            foreach (var group in TypeGroups)
+                            {
+                                foreach (var param in group.Parameters)
+                                {
+                                    string cellValue = worksheet.Cell(row, colIndex).GetString();
+                                    param.Values.Add(new TEDI_Ham_chui_model.Models.ParameterValue { ValueText = cellValue });
+                                    colIndex++;
+                                }
+                            }
+                            copyIndex++;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi đọc file Excel: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
