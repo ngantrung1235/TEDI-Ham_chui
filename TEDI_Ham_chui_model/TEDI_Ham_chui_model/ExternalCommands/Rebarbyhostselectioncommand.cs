@@ -244,6 +244,21 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                         report.Add("Đã tạo mới RebarBarType 'D20' (20mm).");
                     }
 
+                    var barTypeChamfer = new FilteredElementCollector(doc)
+                        .OfClass(typeof(RebarBarType))
+                        .Cast<RebarBarType>()
+                        .FirstOrDefault(x => x.Name == "D12");
+                    if (barTypeChamfer == null)
+                    {
+                        var newId2 = RebarBarType.CreateDefaultRebarBarType(doc);
+                        barTypeChamfer = doc.GetElement(newId2) as RebarBarType;
+                        barTypeChamfer.Name = "D12";
+                        barTypeChamfer.BarModelDiameter = MmToFt(12);
+                        barTypeChamfer.BarNominalDiameter = MmToFt(12);
+                        report.Add("Đã tạo mới RebarBarType 'D12' (12mm) cho thép chéo góc vát.");
+                    }
+                    double chamferSpaceFt = MmToFt(600); // khop voi "S6-D12-600(AS)" trong ban ve
+
                     foreach (var (id, inst, solid, Lv, Wv, Zv) in prepared)
                     {
                         double detA = Lv.X * Wv.Y - Lv.Y * Wv.X;
@@ -358,6 +373,16 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                             }
                         }
                         report.Add($"{id}: đã tạo {instCount} thanh/Set (4 mặt x 2 lớp).");
+
+                        double chamferFt = ChamferCornerReinforcement.GetChamferFt(inst);
+                        ChamferCornerReinforcement.CreateChamferCornerBars(
+                            doc, barTypeChamfer, inst, solid,
+                            Lv, Wv, Zv, L2G,
+                            wOff, zOff,
+                            chamferFt, coverFt,
+                            lMinRaw, lMaxRaw, chamferSpaceFt,
+                            report, id, ref totalCount);
+
                         totalCount += instCount;
                     }
 
