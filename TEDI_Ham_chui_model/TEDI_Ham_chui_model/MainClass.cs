@@ -21,10 +21,22 @@ namespace TEDI_Ham_chui_model
                 string thisAssemblyPath = Assembly.GetExecutingAssembly().Location;
                 string assemblyDir = Path.GetDirectoryName(thisAssemblyPath);
 
-                PushButtonData buttonData = new PushButtonData("cmdTaotho",
+                // Nút Tạo Thô (Đã có từ trước)
+                PushButtonData btnTaoThoData = new PushButtonData("cmdTaotho",
                    "Tạo thô", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.Tao_tho");
 
-                PushButton pushButton = ribbonPanel.AddItem(buttonData) as PushButton;
+                // Nút Tạo Thép (Lệnh mới thêm vào)
+                PushButtonData btnTaoThepData = new PushButtonData("cmdTaoThep",
+                   "Tạo thép\n(Rebar)", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarByHostSelectionCommand");
+
+                // Nút Test (Lệnh Rebar T13)
+                PushButtonData btnTestData = new PushButtonData("cmdTest",
+                   "Test", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarT13Command");
+
+                // Thêm các nút vào Ribbon Panel
+                ribbonPanel.AddItem(btnTaoThoData);
+                ribbonPanel.AddItem(btnTaoThepData);
+                ribbonPanel.AddItem(btnTestData);
 
                 
 
