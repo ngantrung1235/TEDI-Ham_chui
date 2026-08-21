@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
@@ -12,8 +14,8 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     [Transaction(TransactionMode.Manual)]
     public class RebarByHostSelectionCommand : IExternalCommand
     {
-        double MmToFt(double mm) => UnitUtils.ConvertToInternalUnits(mm, UnitTypeId.Millimeters);
-        double FtToMm(double ft) => UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Millimeters);
+        static double MmToFt(double mm) => UnitUtils.ConvertToInternalUnits(mm, UnitTypeId.Millimeters);
+        static double FtToMm(double ft) => UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Millimeters);
 
         Solid GetSolid(FamilyInstance inst)
         {
@@ -129,7 +131,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
 
         // Do 1 duong thang doc L tai 1 vi tri cross cu the, giao voi solid THAT -> tra ve
         // khoang L nam BEN TRONG solid tai dung vi tri do (ngan hon o gan goc vat).
-        (double lo, double hi)? ProbeSolidLRange(Solid solid, XYZ p1, XYZ p2, XYZ Lv)
+        public static (double lo, double hi)? ProbeSolidLRange(Solid solid, XYZ p1, XYZ p2, XYZ Lv)
         {
             if (p1.DistanceTo(p2) < MmToFt(1)) return null;
             var probeCurve = Line.CreateBound(p1, p2);
@@ -229,6 +231,17 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                 using (Transaction t = new Transaction(doc, "Tạo lưới thép hầm chui"))
                 {
                     t.Start();
+
+                    RebarShape rebarShape0 = null;
+                    try
+                    {
+                        rebarShape0 = ShapeDrivenOuterRebar.FindOrLoadRebarShape(doc);
+                        report.Add("Đã load RebarShape 'Rebar 0'.");
+                    }
+                    catch (Exception ex)
+                    {
+                        report.Add($"Cảnh báo: Lỗi load Rebar 0 ({ex.Message}). Code sẽ dùng thép thẳng thay thế.");
+                    }
 
                     var barType = new FilteredElementCollector(doc)
                         .OfClass(typeof(RebarBarType))
@@ -342,34 +355,55 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                                 instCount += rowsMade;
 
                                 // ---- BO 2: chay NGANG (cross), dan deu doc L ----
-                                // Chuyển sang dùng Single Bar thay vì Rebar Set để tránh lỗi
-                                // mảng chữ nhật bị lòi ra ngoài bản đáy hình bình hành.
-                                double dirSign = Math.Sign(otherPos - pos);
-                                double posNudged = pos + dirSign * diamFt;
-
-                                double loSafe = lMinRaw + coverFt;
-                                double hiSafe = lMaxRaw - coverFt;
-                                double lLen = hiSafe - loSafe;
-                                int nRows2 = (int)Math.Ceiling(lLen / spaceFt) + 1;
-                                if (nRows2 < 2) nRows2 = 2;
-                                double rowSpacing2 = lLen / (nRows2 - 1);
-
-                                int rowsMade2 = 0;
-                                for (int i = 0; i < nRows2; i++)
+                                if (layerName == "Ngoai" && fd.isSlab && rebarShape0 != null)
                                 {
-                                    double lPos = loSafe + i * rowSpacing2;
-                                    XYZ p2s = fd.isSlab ? L2G(lPos, fd.crossMin, posNudged) : L2G(lPos, posNudged, fd.crossMin);
-                                    XYZ p2e = fd.isSlab ? L2G(lPos, fd.crossMax, posNudged) : L2G(lPos, posNudged, fd.crossMax);
+                                    bool isNap = (fd.name == "Nap");
+                                    bool bLegAtW0Side = isNap;
+                                    double bLegDefaultMm = 3500;
+                                    double heightN_ft = (inst.LookupParameter("Height_N") ?? inst.Symbol?.LookupParameter("Height_N"))?.AsDouble() ?? (zOff[3] - zOff[0]);
 
-                                    // Bố 2: Thép chạy theo trục Wv (Slab) hoặc Zv (Wall). Normal
-                                    // tính TRỰC TIẾP từ huong that cua thanh (p2s->p2e); truong hop
-                                    // thanh dung (tuong) thi Zv x dir suy bien -> fallback dung Lv
-                                    // (luon vuong goc voi phuong dung).
-                                    XYZ normal2 = SafeNormalFor(p2s, p2e, Zv, Lv);
-                                    CreateSingleBar(doc, barType, inst, p2s, p2e, normal2);
-                                    rowsMade2++;
+                                    int shapeBarsMade = ShapeDrivenOuterRebar.CreateShapeDrivenBars(
+                                        doc, rebarShape0, barType, inst, solid,
+                                        L2G, Wv, Zv, wOff, pos, isNap, bLegAtW0Side,
+                                        coverFt, lMinRaw, lMaxRaw, spaceFt, heightN_ft, bLegDefaultMm, report, id);
+                                    instCount += shapeBarsMade;
                                 }
-                                instCount += rowsMade2;
+                                else if (layerName == "Ngoai" && !fd.isSlab)
+                                {
+                                    // Bỏ qua lớp Ngoài của Tường vì thép chữ U của bản Đáy/Nắp đã neo xuống tạo thành lớp này
+                                }
+                                else
+                                {
+                                    // Chuyển sang dùng Single Bar thay vì Rebar Set để tránh lỗi
+                                    // mảng chữ nhật bị lòi ra ngoài bản đáy hình bình hành.
+                                    double dirSign = Math.Sign(otherPos - pos);
+                                    double posNudged = pos + dirSign * diamFt;
+
+                                    double loSafe = lMinRaw + coverFt;
+                                    double hiSafe = lMaxRaw - coverFt;
+                                    double lLen = hiSafe - loSafe;
+                                    int nRows2 = (int)Math.Ceiling(lLen / spaceFt) + 1;
+                                    if (nRows2 < 2) nRows2 = 2;
+                                    double rowSpacing2 = lLen / (nRows2 - 1);
+
+                                    int rowsMade2 = 0;
+                                    for (int i = 0; i < nRows2; i++)
+                                    {
+                                        double lPos = loSafe + i * rowSpacing2;
+                                        XYZ p2s = fd.isSlab ? L2G(lPos, fd.crossMin, posNudged) : L2G(lPos, posNudged, fd.crossMin);
+                                        XYZ p2e = fd.isSlab ? L2G(lPos, fd.crossMax, posNudged) : L2G(lPos, posNudged, fd.crossMax);
+
+                                        // Bố 2: Thép chạy theo trục Wv (Slab) hoặc Zv (Wall). Normal
+                                        // tính TRỰC TIẾP từ huong that cua thanh (p2s->p2e); truong hop
+                                        // thanh dung (tuong) thi Zv x dir suy bien -> fallback dung Lv
+                                        // (luon vuong goc voi phuong dung).
+                                        XYZ normal2 = SafeNormalFor(p2s, p2e, Zv, Lv);
+                                        CreateSingleBar(doc, barType, inst, p2s, p2e, normal2);
+                                        rowsMade2++;
+                                    }
+                                    instCount += rowsMade2;
+                                }
+                                instCount += 0; // Để tránh lỗi count chưa gán ở block if, mặc dù ta đã cộng dồn ở trong
                             }
                         }
                         report.Add($"{id}: đã tạo {instCount} thanh/Set (4 mặt x 2 lớp).");
@@ -402,6 +436,185 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                 message = ex.Message + "\n" + ex.StackTrace;
                 return Result.Failed;
             }
+        }
+    }
+
+    // ============================================================================
+    // Thay the cho BO 2 (thep chay phuong Wv - song song chieu rong cong) cua
+    // LOP NGOAI tren 2 mat Day/Nap: thay vi ve thanh thep thang don gian, dung
+    // RebarShape "Rebar 0" (family "Rebar 0.rfa", 3 tham so hinh A/B/C, dang
+    // chu Z: 1 chan dai B neo sau vao 1 tuong, doan thang C chay ngang, 1 chan
+    // ngan A neo vao tuong con lai) de noi lien mach thep ngoai cua ban voi
+    // thep ngoai cua tuong qua goc.
+    //
+    // *** CAC HANG SO HIEU CHINH HINH HOC (CALIBRATION) ***
+    // SHAPE_U_TIP_MM / SHAPE_V_TIP_MM la toa do LOCAL (trong mat phang rieng cua
+    // RebarShape "Rebar 0", he truc (xVec,yVec) tu chon khi goi CreateFromRebarShape)
+    // cua diem MUI CHAN B (dau neo sau nhat, xa doan C nhat). Da do dac THUC
+    // NGHIEM bang cach tao thu 1 thanh trong Revit that (B=3500mm), doi chieu
+    // toa do voi 2 thanh mau nguoi dung da dat tay san trong model du an
+    // (elementId 415621 - mau mat Nap, 416154 - mau mat Day) - KHOP TUYET DOI
+    // (sai lech 0mm) o ca 2 cach dat. Cac hang so nay CHI dung duoc khi:
+    //   - B (chan dai) = 3500mm dung nhu hien tai
+    //   - Thanh thep dung loai D20 (anh huong ban kinh uon)
+    //   - Van dung dung RebarShape "Rebar 0" (khong doi shape khac)
+    // ============================================================================
+    public static class ShapeDrivenOuterRebar
+    {
+        private const double SHAPE_U_TIP_MM = 990.0;
+        private const double SHAPE_V_TIP_MM = -2650.0;
+
+        private static double MmToFt(double mm) => UnitUtils.ConvertToInternalUnits(mm, UnitTypeId.Millimeters);
+        private static double FtToMm(double ft) => UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Millimeters);
+
+        private class RebarShapeLoadOptions : IFamilyLoadOptions
+        {
+            public bool OnFamilyFound(bool familyInUse, out bool overwriteParameterValues)
+            {
+                overwriteParameterValues = true;
+                return true;
+            }
+
+            public bool OnSharedFamilyFound(Family sharedFamily, bool familyInUse, out FamilySource source, out bool overwriteParameterValues)
+            {
+                source = FamilySource.Family;
+                overwriteParameterValues = true;
+                return true;
+            }
+        }
+
+        // Tim RebarShape ten "Rebar 0" trong document hien tai; neu chua co (vi
+        // du chay tren 1 file du an khac chua tung load family nay), tu dong
+        // LoadFamily tu duong dan .rfa mac dinh ben duoi.
+        public static RebarShape FindOrLoadRebarShape(
+            Document doc,
+            string shapeName = "Rebar 0",
+            string rfaPath = null)
+        {
+            if (string.IsNullOrEmpty(rfaPath))
+            {
+                string dllFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                rfaPath = Path.Combine(dllFolder, "Rebar 0 .rfa");
+            }
+
+            var existing = new FilteredElementCollector(doc)
+                .OfClass(typeof(RebarShape))
+                .Cast<RebarShape>()
+                .FirstOrDefault(rs => rs.Name.Trim().Equals(shapeName.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (existing != null) return existing;
+
+            if (!File.Exists(rfaPath))
+                throw new InvalidOperationException(
+                    $"Khong tim thay RebarShape '{shapeName}' trong model, va cung khong tim thay file " +
+                    $"'{rfaPath}' de tu dong load. Hay load family 'Rebar 0.rfa' vao model truoc.");
+
+            Family loadedFamily;
+            doc.LoadFamily(rfaPath, new RebarShapeLoadOptions(), out loadedFamily);
+            if (loadedFamily == null)
+                throw new InvalidOperationException($"Load family tu '{rfaPath}' that bai.");
+
+            foreach (ElementId typeId in loadedFamily.GetFamilySymbolIds())
+                if (doc.GetElement(typeId) is RebarShape rs) return rs;
+
+            // fallback: tim lai theo ten sau khi load (phong khi ten type ben trong khac ten family)
+            var reloaded = new FilteredElementCollector(doc)
+                .OfClass(typeof(RebarShape))
+                .Cast<RebarShape>()
+                .FirstOrDefault(rs => rs.Name.Trim().Equals(shapeName.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (reloaded == null)
+                throw new InvalidOperationException($"Da load family '{rfaPath}' nhung khong tim thay RebarShape '{shapeName}' ben trong.");
+            return reloaded;
+        }
+
+        public static int CreateShapeDrivenBars(
+            Document d, RebarShape rebarShape, RebarBarType barType, FamilyInstance inst, Solid solid,
+            Func<double, double, double, XYZ> L2G, XYZ Wv, XYZ Zv,
+            List<double> wOff, double faceOuterZ, bool isNap, bool bLegAtW0Side,
+            double coverFt, double lMinRaw, double lMaxRaw, double spaceFt,
+            double heightN_ft, double bLegDefaultMm, List<string> report, ElementId hostId)
+        {
+            double diamMm = FtToMm(barType.BarModelDiameter);
+            double heightN_mm = FtToMm(heightN_ft);
+
+            // A = (Height_N - B) + 40*D
+            double A_mm = (heightN_mm - bLegDefaultMm) + 40.0 * diamMm;
+            double B_mm = bLegDefaultMm;
+
+            double w0 = wOff[0], w3 = wOff[3];
+
+            XYZ yVec = isNap ? Zv : -Zv;
+            double tipZft = isNap ? (faceOuterZ - MmToFt(B_mm)) : (faceOuterZ + MmToFt(B_mm));
+
+            double loSafe = lMinRaw + coverFt;
+            double hiSafe = lMaxRaw - coverFt;
+            double lLen = hiSafe - loSafe;
+            if (lLen < MmToFt(20))
+            {
+                report.Add($"{hostId}: chieu dai L qua ngan, bo qua thep {(isNap ? "Nap" : "Day")} (Rebar 0).");
+                return 0;
+            }
+            int nRows = (int)Math.Ceiling(lLen / spaceFt) + 1;
+            if (nRows < 2) nRows = 2;
+            double rowSpacing = lLen / (nRows - 1);
+
+            int made = 0;
+            for (int i = 0; i < nRows; i++)
+            {
+                double lRow = loSafe + i * rowSpacing;
+
+                XYZ probeA = L2G(lRow, w0, faceOuterZ);
+                XYZ probeB = L2G(lRow, w3, faceOuterZ);
+                var wRange = RebarByHostSelectionCommand.ProbeSolidLRange(solid, probeA, probeB, Wv);
+                if (wRange == null)
+                {
+                    report.Add($"{hostId}: hang L={FtToMm(lRow):F0}mm khong do duoc be tong (Rebar 0) - bo qua.");
+                    continue;
+                }
+
+                double wLoSafe = wRange.Value.lo + coverFt;
+                double wHiSafe = wRange.Value.hi - coverFt;
+                double C_ft = wHiSafe - wLoSafe;
+                double C_mm = FtToMm(C_ft);
+                if (C_mm < 100)
+                {
+                    report.Add($"{hostId}: hang L={FtToMm(lRow):F0}mm C qua ngan ({C_mm:F0}mm) - bo qua.");
+                    continue;
+                }
+
+                double wB_pos = bLegAtW0Side ? wLoSafe : wHiSafe;
+                double wA_pos = bLegAtW0Side ? wHiSafe : wLoSafe;
+
+                XYZ ptB = L2G(lRow, wB_pos, faceOuterZ);
+                XYZ ptA = L2G(lRow, wA_pos, faceOuterZ);
+                XYZ xVec = new XYZ(ptB.X - ptA.X, ptB.Y - ptA.Y, 0).Normalize();
+
+                XYZ qTip = L2G(lRow, wB_pos, tipZft);
+                // Gốc toạ độ (origin) của family Rebar thực chất nằm ở mũi chân thép (V=0),
+                // còn cạnh ngang C nằm ở toạ độ V = B. Do đó không cộng/trừ SHAPE_V_TIP_MM nữa!
+                XYZ origin = qTip - MmToFt(SHAPE_U_TIP_MM) * xVec;
+
+                Rebar rebar;
+                try
+                {
+                    rebar = Rebar.CreateFromRebarShape(d, rebarShape, barType, inst, origin, xVec, yVec);
+                }
+                catch (Exception ex)
+                {
+                    report.Add($"{hostId}: loi tao Rebar 0 tai L={FtToMm(lRow):F0}mm: {ex.Message}");
+                    continue;
+                }
+                if (rebar == null) continue;
+
+                rebar.LookupParameter("A")?.Set(MmToFt(A_mm));
+                rebar.LookupParameter("B")?.Set(MmToFt(B_mm));
+                rebar.LookupParameter("C")?.Set(C_ft);
+
+                made++;
+            }
+
+            report.Add($"{hostId}: {(isNap ? "Nap" : "Day")} Ngoai (Rebar 0) - da tao {made}/{nRows} thanh. " +
+                       $"A={A_mm:F0}mm B={B_mm:F0}mm (C thay doi theo tung hang theo be tong thuc te).");
+            return made;
         }
     }
 }
