@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="RevitAPI">
@@ -16,8 +17,11 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+  </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="echo ===== POST BUILD =====&#xD;&#xA;&#xD;&#xA;set REVIT_ADDIN_ROOT=%25APPDATA%25\Autodesk\Revit\Addins\2027&#xD;&#xA;set ADDIN_DIR=%25APPDATA%25\Autodesk\Revit\Addins\2027\TEDI-Ham_Chui_model&#xD;&#xA;&#xD;&#xA;if not exist &quot;%25ADDIN_DIR%25&quot; mkdir &quot;%25ADDIN_DIR%25&quot;&#xD;&#xA;&#xD;&#xA;echo Copying DLLs...&#xD;&#xA;xcopy &quot;$(TargetDir)*.dll&quot; &quot;%25ADDIN_DIR%25\&quot; /Y /I&#xD;&#xA;&#xD;&#xA;echo Copy ADDIN...&#xD;&#xA;copy &quot;$(ProjectDir)Ham_chui.addin&quot; &quot;%25REVIT_ADDIN_ROOT%25&quot; /Y&#xD;&#xA;&#xD;&#xA;echo Copy Assets...&#xD;&#xA;if exist &quot;$(ProjectDir)Assets&quot; xcopy &quot;$(ProjectDir)Assets\*&quot; &quot;%25ADDIN_DIR%25\Assets\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo Copy Data...&#xD;&#xA;if exist &quot;$(ProjectDir)Data&quot; xcopy &quot;$(ProjectDir)Data\*&quot; &quot;%25ADDIN_DIR%25\data\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo Copy Family...&#xD;&#xA;if exist &quot;$(ProjectDir)Family&quot; xcopy &quot;$(ProjectDir)Family\*&quot; &quot;%25ADDIN_DIR%25\Family\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo Copy Models...&#xD;&#xA;if exist &quot;$(ProjectDir)Models&quot; xcopy &quot;$(ProjectDir)Models\*&quot; &quot;%25ADDIN_DIR%25\Models\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo ===== DONE =====&#xD;&#xA;" />
+    <Exec Command="echo ===== POST BUILD =====&#xD;&#xA;&#xD;&#xA;set REVIT_ADDIN_ROOT=%25APPDATA%25\Autodesk\Revit\Addins\2027&#xD;&#xA;set ADDIN_DIR=%25APPDATA%25\Autodesk\Revit\Addins\2027\TEDI-Ham_Chui_model&#xD;&#xA;&#xD;&#xA;if not exist &quot;%25ADDIN_DIR%25&quot; mkdir &quot;%25ADDIN_DIR%25&quot;&#xD;&#xA;&#xD;&#xA;echo Copying DLLs...&#xD;&#xA;xcopy &quot;$(TargetDir)*.dll&quot; &quot;%25ADDIN_DIR%25\&quot; /Y /I&#xD;&#xA;&#xD;&#xA;echo Copying RFA files...&#xD;&#xA;xcopy &quot;$(ProjectDir)*.rfa&quot; &quot;%25ADDIN_DIR%25\&quot; /Y /I&#xD;&#xA;&#xD;&#xA;echo Copy ADDIN...&#xD;&#xA;copy &quot;$(ProjectDir)Ham_chui.addin&quot; &quot;%25REVIT_ADDIN_ROOT%25&quot; /Y&#xD;&#xA;&#xD;&#xA;echo Copy Assets...&#xD;&#xA;if exist &quot;$(ProjectDir)Assets&quot; xcopy &quot;$(ProjectDir)Assets\*&quot; &quot;%25ADDIN_DIR%25\Assets\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo Copy Data...&#xD;&#xA;if exist &quot;$(ProjectDir)Data&quot; xcopy &quot;$(ProjectDir)Data\*&quot; &quot;%25ADDIN_DIR%25\data\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo Copy Family...&#xD;&#xA;if exist &quot;$(ProjectDir)Family&quot; xcopy &quot;$(ProjectDir)Family\*&quot; &quot;%25ADDIN_DIR%25\Family\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo Copy Models...&#xD;&#xA;if exist &quot;$(ProjectDir)Models&quot; xcopy &quot;$(ProjectDir)Models\*&quot; &quot;%25ADDIN_DIR%25\Models\&quot; /E /I /Y&#xD;&#xA;&#xD;&#xA;echo ===== DONE =====&#xD;&#xA;" />
   </Target>
 
 

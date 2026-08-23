@@ -17,10 +17,10 @@ namespace TEDI_Ham_chui_model.ExternalCommands
             try
             {
                 // Khởi tạo ViewModel
-                var viewModel = new TEDI_Ham_chui_model.ViewModels.Window1ViewModel();
+                var viewModel = new TEDI_Ham_chui_model.ViewModels.InputViewModel();
 
                 // Gán ViewModel vào DataContext của giao diện
-                Window1 viewBoctach = new Window1();
+                Input viewBoctach = new Input();
                 viewBoctach.DataContext = viewModel;
 
                 // Mở cửa sổ dạng Modal (bắt buộc để có thể PickPoint sau khi đóng)
