@@ -138,6 +138,16 @@ namespace TEDI_Ham_chui_model.ExternalCommands
         private const double SHAPE_U_TIP_MM = 990.0;
         private const double SHAPE_V_TIP_MM = -2650.0;
 
+        // Bu tru do hut chieu dai doan C (bend deduction) tai dau chan A (dau
+        // KHONG duoc "ghim" truc tiep boi origin/qTip, ma do family tu ve ra
+        // tu tham so C). Do dac thuc nghiem: voi C~5892mm, D20, dau A luon hut
+        // vao trong ~27.5mm so voi vi tri wLoSafe/wHiSafe muc tieu, GIONG NHAU
+        // o ca 2 chieu dat (Nap va Day, xVec doi dau nhau) - vi day la do hut
+        // do bend cua chinh chan A (dai A=1900mm) nen khong phu thuoc C hay
+        // chieu xVec. Cong them vao tham so "C" TRUOC KHI set (khong dung de
+        // tinh xVec/origin) de dau A khop dung wLoSafe/wHiSafe.
+        private const double SHAPE_C_END_COMPENSATION_MM = 27.5;
+
         private static double MmToFt(double mm) => UnitUtils.ConvertToInternalUnits(mm, UnitTypeId.Millimeters);
         private static double FtToMm(double ft) => UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Millimeters);
 
@@ -293,7 +303,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
 
                 rebar.LookupParameter("A")?.Set(MmToFt(A_mm));
                 rebar.LookupParameter("B")?.Set(MmToFt(B_mm));
-                rebar.LookupParameter("C")?.Set(C_ft);
+                rebar.LookupParameter("C")?.Set(C_ft + MmToFt(SHAPE_C_END_COMPENSATION_MM));
 
                 made++;
             }
