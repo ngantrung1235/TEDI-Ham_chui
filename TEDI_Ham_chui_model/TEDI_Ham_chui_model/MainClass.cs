@@ -25,20 +25,30 @@ namespace TEDI_Ham_chui_model
                 PushButtonData btnTaoThoData = new PushButtonData("cmdTaotho",
                    "Tạo thô", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.Tao_tho");
 
-                // Nút Tạo Thép (Lệnh mới thêm vào)
-                PushButtonData btnTaoThepData = new PushButtonData("cmdTaoThep",
-                   "Tạo thép\n(Rebar)", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarByHostSelectionCommand");
+                // Nút Tạo Thép Dọc (Bố 1 - chạy dọc theo Lv, 4 mặt x 2 lớp)
+                PushButtonData btnRebarLongData = new PushButtonData("cmdRebarLong",
+                   "Tạo thép\ndọc", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarLongitudinalCommand");
 
-                // Nút Test (Lệnh Rebar T13)
-                PushButtonData btnTestData = new PushButtonData("cmdTest",
-                   "Test", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarT13Command");
+                // Nút Tạo Rebar 0 Nắp/Đáy (Bố 2 lớp Ngoài của Đáy/Nắp - chữ Z)
+                PushButtonData btnRebarOuterData = new PushButtonData("cmdRebarOuter",
+                   "Tạo Rebar 0\nNắp/Đáy", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarOuterShapeCommand");
+
+                // Nút Tạo Thép Single Bên Trong (Bố 2 lớp Trong, cả 4 mặt)
+                PushButtonData btnRebarInnerData = new PushButtonData("cmdRebarInner",
+                   "Tạo thép\nsingle trong", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarInnerSingleCommand");
+
+                // Nút Tạo Thép Chéo Góc Vát (Chamfer)
+                PushButtonData btnRebarChamferData = new PushButtonData("cmdRebarChamfer",
+                   "Tạo thép\nchéo", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarChamferCommand");
 
                 // Thêm các nút vào Ribbon Panel
                 ribbonPanel.AddItem(btnTaoThoData);
-                ribbonPanel.AddItem(btnTaoThepData);
-                ribbonPanel.AddItem(btnTestData);
+                ribbonPanel.AddItem(btnRebarLongData);
+                ribbonPanel.AddItem(btnRebarOuterData);
+                ribbonPanel.AddItem(btnRebarInnerData);
+                ribbonPanel.AddItem(btnRebarChamferData);
 
-                
+
 
                 return Result.Succeeded;
             }
