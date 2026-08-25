@@ -1,0 +1,344 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Structure;
+using NCKH_AI_SECTION.Models;
+
+namespace NCKH_AI_SECTION.Services.Tool
+{
+    public class SV_VeThepGia
+    {
+        private const double MmToFeet = 1.0 / 304.8;
+
+        public static void VeThepGia(
+            Document doc, 
+            FamilyInstance beam, 
+            XYZ p1, 
+            XYZ p2, 
+            double wMm, 
+            double hMm, 
+            MD_ThongTinMatCat thongTinThep, 
+            XYZ dir, 
+            XYZ up, 
+            XYZ cross, 
+            double coverMm, 
+            double stirrupD_val, 
+            List<RebarBarType> barTypes, 
+            RebarShape uShape = null, 
+            RebarShape cShape = null)
+        {
+            var secForSide = thongTinThep.EffectiveMiddleSection ?? thongTinThep.EffectiveStartSection;
+            var sideRebars = secForSide?.Reinforcements?
+                .Where(r => r.Role.Equals("SideLongitudinal", StringComparison.OrdinalIgnoreCase))
+                .ToList() ?? new List<Reinforcement>();
+
+            if (!sideRebars.Any()) return;
+
+            int totalQuantity = sideRebars.Sum(r => r.Quantity ?? 0);
+            if (totalQuantity <= 0) return;
+
+            int numLayers = (int)Math.Ceiling(totalQuantity / 2.0);
+            if (numLayers == 0) numLayers = 1;
+
+            double safeMargin = 50.0; 
+            double availableHeight = hMm - 2 * (coverMm + stirrupD_val + safeMargin);
+            if (availableHeight <= 0) availableHeight = hMm * 0.5;
+
+            double spacingZ = availableHeight / (numLayers + 1);
+            double startZ = coverMm + stirrupD_val + safeMargin + spacingZ;
+            
+            int barProcessed = 0;
+            Dictionary<int, List<double>> layerToXPositions = new Dictionary<int, List<double>>();
+
+            // ========================================================
+            // 1. VẼ THÉP DỌC CHẠY DỌC DẦM (THÉP CHỐNG PHÌNH)
+            // ========================================================
+            foreach (var currentBar in sideRebars)
+            {
+                double barD = currentBar.Diameter ?? 0;
+                RebarBarType barType = barTypes.FirstOrDefault(t => t.Name.Contains(barD.ToString())) 
+                                    ?? barTypes.First();
+
+                for (int q = 0; q < (currentBar.Quantity ?? 0); q++)
+                {
+                    int layerIndex = barProcessed / 2;
+                    int sideIndex = barProcessed % 2;
+
+                    double currentZFromTop = startZ + layerIndex * spacingZ;
+                    double offsetZ = -currentZFromTop * MmToFeet;
+
+                    double safeGapMm = 3.0; // Khoảng hở an toàn 3mm
+                    double distanceToCenterMm = (wMm / 2.0) - coverMm - stirrupD_val - safeGapMm - (barD / 2.0);
+                    double offsetX = distanceToCenterMm * MmToFeet;
+                    
+                    if (sideIndex == 0) offsetX = -offsetX;
+
+                    if (!layerToXPositions.ContainsKey(layerIndex)) layerToXPositions[layerIndex] = new List<double>();
+                    layerToXPositions[layerIndex].Add(offsetX);
+
+                    XYZ offset = up * offsetZ + cross * offsetX;
+
+                    double offsetStartFeet = currentBar.OffsetStart ?? 0 * MmToFeet;
+                    double offsetEndFeet = currentBar.OffsetEnd ?? 0 * MmToFeet;
+
+                    XYZ sp = p1 + offset + dir * (coverMm * MmToFeet + offsetStartFeet);
+                    XYZ ep = p2 + offset - dir * (coverMm * MmToFeet + offsetEndFeet);
+
+                    if (currentBar.AlwaysExtendToColEnd)
+                    {
+                        double colWidthStartFeet = thongTinThep.ColumnWidthStart * MmToFeet;
+                        double colWidthEndFeet = thongTinThep.ColumnWidthEnd * MmToFeet;
+
+                        double colStartExtension = (colWidthStartFeet / 2.0 - coverMm * MmToFeet) - offsetStartFeet;
+                        if (colStartExtension > 0) sp = sp - dir * colStartExtension;
+
+                        double colEndExtension = (colWidthEndFeet / 2.0 - coverMm * MmToFeet) - offsetEndFeet;
+                        if (colEndExtension > 0) ep = ep + dir * colEndExtension;
+                    }
+
+                    var curves = new List<Curve>();
+                    if (currentBar.HookLeft > 0)
+                    {
+                        XYZ hookDir = (sideIndex == 0) ? cross : -cross;
+                        XYZ hookStartPoint = sp + hookDir * (currentBar.HookLeft ?? 0 * MmToFeet);
+                        curves.Add(Line.CreateBound(hookStartPoint, sp));
+                    }
+
+                    curves.Add(Line.CreateBound(sp, ep));
+
+                    if (currentBar.HookRight > 0)
+                    {
+                        XYZ hookDir = (sideIndex == 0) ? cross : -cross;
+                        XYZ hookEndPoint = ep + hookDir * (currentBar.HookRight ?? 0 * MmToFeet);
+                        curves.Add(Line.CreateBound(ep, hookEndPoint));
+                    }
+
+                    Rebar rebar = null;
+                    if (curves.Count == 3 && uShape != null)
+                    {
+                        try { rebar = Rebar.CreateFromCurvesAndShape(doc, uShape, barType, null, null, beam, up, curves, RebarHookOrientation.Right, RebarHookOrientation.Right, 0.0, 0.0, ElementId.InvalidElementId, ElementId.InvalidElementId); } catch { }
+                    }
+
+                    if (rebar == null)
+                    {
+                        try 
+                        { 
+                            rebar = Rebar.CreateFromCurves(doc, RebarStyle.Standard, barType, null, null, beam, up, curves, RebarHookOrientation.Right, RebarHookOrientation.Right, false, true); 
+                        } 
+                        catch (Exception ex) 
+                        { 
+                            System.Diagnostics.Debug.WriteLine($"Lỗi vẽ thép chống phình: {ex.Message}");
+                        }
+                    }
+
+                    barProcessed++;
+                }
+            }
+            
+            // ========================================================
+            // 2. VẼ ĐAI C NỐI GIỮA 2 THÉP GIÁ (CÁCH 3: SHAPE-DRIVEN + PARAMETERS)
+            // ========================================================
+            string tieTypeStr = thongTinThep.StirrupCConnectSide ?? "Không";
+            if (!tieTypeStr.Equals("Không", StringComparison.OrdinalIgnoreCase))
+            {
+                double tieDMm = 8.0;
+                double.TryParse(thongTinThep.StirrupCConnectSideDiameter, out tieDMm);
+                if (tieDMm <= 0) tieDMm = 8.0;
+                
+                RebarBarType tieBarType = barTypes.FirstOrDefault(t => t.Name.Contains(tieDMm.ToString())) 
+                                       ?? barTypes.FirstOrDefault(t => Math.Abs(t.BarNominalDiameter * 304.8 - tieDMm) < 2.0) 
+                                       ?? barTypes.First();
+
+                // Tự động tạo Type mới với Bán kính góc bo cực nhỏ để ép sát thép đai C vào thép dọc mà không báo lỗi
+                double sideBarDMm = 20.0;
+                double.TryParse(thongTinThep.SideRebarAnchorD, out sideBarDMm);
+                if (sideBarDMm <= 0) sideBarDMm = 20.0;
+                
+                double tightHookLenMm = sideBarDMm + tieDMm + 2.0; // Chiều cao lý tưởng để ôm khít thép dọc
+                double maxBendDiameterMm = tightHookLenMm - 5.0; // Bóp đường kính bo góc lại sao cho luôn chừa đủ 5mm đoạn thẳng an toàn
+
+                string newTypeName = $"{tieBarType.Name}_C_Tie_Tight";
+                RebarBarType customTieBarType = barTypes.FirstOrDefault(t => t.Name == newTypeName);
+                if (customTieBarType == null)
+                {
+                    try
+                    {
+                        customTieBarType = tieBarType.Duplicate(newTypeName) as RebarBarType;
+                        if (customTieBarType != null)
+                        {
+                            customTieBarType.StirrupTieBendDiameter = maxBendDiameterMm * MmToFeet;
+                        }
+                    }
+                    catch { }
+                }
+                if (customTieBarType != null) tieBarType = customTieBarType;
+
+
+                double tieSpacingMm = 500.0;
+                if (!string.IsNullOrEmpty(thongTinThep.StirrupCConnectSideSpacing)) double.TryParse(thongTinThep.StirrupCConnectSideSpacing, out tieSpacingMm);
+                if (tieSpacingMm <= 0) tieSpacingMm = 500.0;
+                double tieSpacingFeet = tieSpacingMm * MmToFeet;
+                
+                double startOffset = coverMm * MmToFeet;
+                if (tieTypeStr.Equals("Theo nhịp", StringComparison.OrdinalIgnoreCase))
+                {
+                    startOffset = thongTinThep.ColumnWidthStart * MmToFeet;
+                }
+
+                startOffset += 25.0 * MmToFeet; // Né đai vuông
+                
+                double beamLength = p1.DistanceTo(p2);
+                double spacingLength = beamLength - startOffset;
+                
+                if (tieTypeStr.Equals("Theo nhịp", StringComparison.OrdinalIgnoreCase))
+                {
+                    double colEndFeet = thongTinThep.ColumnWidthEnd * MmToFeet;
+                    spacingLength = beamLength - startOffset - colEndFeet + 25.0 * MmToFeet; 
+                }
+                else 
+                {
+                    spacingLength = beamLength - startOffset - coverMm * MmToFeet;
+                }
+
+                if (spacingLength > 0.01)
+                {
+                    double sideBarD = sideRebars.FirstOrDefault()?.Diameter ?? 12.0;
+
+                    for (int l = 0; l < numLayers; l++)
+                    {
+                        if (!layerToXPositions.ContainsKey(l) || layerToXPositions[l].Count < 2) continue;
+
+                        double currentZFromTop = startZ + l * spacingZ;
+                        double offsetZ = -currentZFromTop * MmToFeet;
+
+                        double xLeftLong = layerToXPositions[l].Min();
+                        double xRightLong = layerToXPositions[l].Max();
+
+                        // Tim đai C nằm ngay mép tiếp xúc ngoài của hai thanh thép dọc
+                        double offsetX_left = xLeftLong - (sideBarD / 2.0 + tieDMm / 2.0) * MmToFeet;
+                        double offsetX_right = xRightLong + (sideBarD / 2.0 + tieDMm / 2.0) * MmToFeet;
+
+                        XYZ tie_sp = p1 + up * offsetZ + cross * offsetX_left + dir * startOffset;
+                        XYZ tie_ep = p1 + up * offsetZ + cross * offsetX_right + dir * startOffset;
+
+                        // 1 Đường thẳng đại diện cho thân đai C vuông góc mặt cắt dầm
+                        var tieCurves = new List<Curve> { Line.CreateBound(tie_sp, tie_ep) };
+
+                        try
+                        {
+                            Rebar tieRebar = null;
+
+                            // -------------------------------------------------------------
+                            // PHƯƠNG ÁN CHÍNH: Dùng RebarShape (M_01) và điều chỉnh Parameters
+                            // -------------------------------------------------------------
+                            if (cShape != null)
+                            {
+                                try
+                                {
+                                    tieRebar = Rebar.CreateFromCurvesAndShape(
+                                        doc, 
+                                        cShape, 
+                                        tieBarType, 
+                                        null, null, 
+                                        beam, 
+                                        dir, // Normal vector phương dir (mặt cắt dầm)
+                                        tieCurves, 
+                                        RebarHookOrientation.Right, 
+                                        RebarHookOrientation.Right, 
+                                        0.0, 0.0, 
+                                        ElementId.InvalidElementId, 
+                                        ElementId.InvalidElementId
+                                    );
+
+                                    if (tieRebar != null)
+                                    {
+                                        // Tính toán chiều dài ngàm móc ôm qua thanh thép chống phình
+                                        double hookLengthFeet = (sideBarD * 2.5) * MmToFeet; 
+
+                                        // Ép tham số A và C (chiều dài móc uốn ở 2 đầu trong Family M_01 / Shape 01)
+                                        Parameter paramA = tieRebar.LookupParameter("A") ?? tieRebar.LookupParameter("Hook 1 Length");
+                                        Parameter paramC = tieRebar.LookupParameter("C") ?? tieRebar.LookupParameter("Hook 2 Length");
+
+                                        if (paramA != null && !paramA.IsReadOnly) paramA.Set(hookLengthFeet);
+                                        if (paramC != null && !paramC.IsReadOnly) paramC.Set(hookLengthFeet);
+                                    }
+                                }
+                                catch (Exception exShape)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Lỗi cShape: {exShape.Message}");
+                                }
+                            }
+
+                            // -------------------------------------------------------------
+                            // PHƯƠNG ÁN DỰ PHÒNG: Dùng Phương pháp Hình học 3 đoạn thẳng an toàn 100%
+                            // (Tránh lỗi Compiler do hàm SetHookRotation đã bị xóa trong Revit API)
+                            // -------------------------------------------------------------
+                            if (tieRebar == null)
+                            {
+                                // Lấy tâm thép dọc (Thép chống phình) làm chuẩn
+                                XYZ c_left = p1 + up * offsetZ + cross * xLeftLong + dir * startOffset;
+                                XYZ c_right = p1 + up * offsetZ + cross * xRightLong + dir * startOffset;
+
+                                // Tính toán bán kính cong của thép đai
+                                double rInnerFeet = tieBarType.StirrupTieBendDiameter / 2.0;
+                                double rCenterFeet = rInnerFeet + (tieDMm / 2.0) * MmToFeet;
+                                
+                                // Biên độ an toàn để đoạn thẳng giữa 2 góc bo không bị lỗi ShortCurveTolerance (1.2mm)
+                                double safetyMarginFeet = 5.0 * MmToFeet; 
+                                double halfMargin = safetyMarginFeet / 2.0;
+
+                                // Xác định 4 góc của đai C sao cho tâm uốn cong nằm đúng ngay vị trí tâm thép dọc
+                                XYZ p3_left = c_left - cross * rCenterFeet - up * (rCenterFeet + halfMargin);
+                                XYZ p4_right = c_right + cross * rCenterFeet - up * (rCenterFeet + halfMargin);
+                                XYZ p2_left = c_left - cross * rCenterFeet + up * (rCenterFeet + halfMargin);
+                                XYZ p5_right = c_right + cross * rCenterFeet + up * (rCenterFeet + halfMargin);
+
+                                // Tính toán độ dài đoạn neo gập vào (mặc định tối thiểu 50mm hoặc D * hệ số người dùng nhập)
+                                double hookD = 6.0;
+                                double.TryParse(thongTinThep.StirrupCHookLengthLeft, out hookD);
+                                if (hookD <= 0) hookD = 6.0;
+
+                                double hookInLen = Math.Max(50.0 * MmToFeet, (tieDMm * hookD) * MmToFeet);
+                                XYZ p1_left = p2_left + cross * hookInLen;
+                                XYZ p6_right = p5_right - cross * hookInLen;
+
+                                var tieCurves5 = new List<Curve>
+                                {
+                                    Line.CreateBound(p1_left, p2_left),
+                                    Line.CreateBound(p2_left, p3_left),
+                                    Line.CreateBound(p3_left, p4_right),
+                                    Line.CreateBound(p4_right, p5_right),
+                                    Line.CreateBound(p5_right, p6_right)
+                                };
+
+                                tieRebar = Rebar.CreateFromCurves(
+                                    doc, RebarStyle.StirrupTie, tieBarType, null, null, 
+                                    beam, dir, tieCurves5, 
+                                    RebarHookOrientation.Right, RebarHookOrientation.Right, 
+                                    false, true
+                                );
+                            }
+
+                            // -------------------------------------------------------------
+                            // RẢI ĐAI C THEO CHIỀU DÀI DẦM
+                            // -------------------------------------------------------------
+                            if (tieRebar != null)
+                            {
+                                int count = (int)(spacingLength / tieSpacingFeet) + 1;
+                                if (count > 1)
+                                {
+                                    tieRebar.GetShapeDrivenAccessor().SetLayoutAsNumberWithSpacing(count, tieSpacingFeet, true, true, true);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Lỗi Vẽ Đai C Lớp {l}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

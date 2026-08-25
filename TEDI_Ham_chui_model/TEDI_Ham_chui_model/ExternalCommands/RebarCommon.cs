@@ -48,7 +48,8 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     {
         public const double DefaultCoverMm = 50.0;
         public const double DefaultDiamMm = 20.0;
-        public const double DefaultSpaceMm = 200.0;
+        public const double DefaultTieDiamMm = 8.0;
+        public const double DefaultTieSpaceMm = 200.0;
 
         public static double MmToFt(double mm) => UnitUtils.ConvertToInternalUnits(mm, UnitTypeId.Millimeters);
         public static double FtToMm(double ft) => UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Millimeters);

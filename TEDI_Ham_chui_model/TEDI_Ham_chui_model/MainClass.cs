@@ -41,12 +41,17 @@ namespace TEDI_Ham_chui_model
                 PushButtonData btnRebarChamferData = new PushButtonData("cmdRebarChamfer",
                    "Tạo thép\nchéo", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarChamferCommand");
 
+                // Nút Tạo Thép Dọc + Đai C (thép dọc 4 mặt x 2 lớp, kèm đai C nối lớp Ngoài-Trong)
+                PushButtonData btnRebarStirrupCData = new PushButtonData("cmdRebarStirrupC",
+                   "Tạo thép dọc\n+ đai C", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarStirrupCCommand");
+
                 // Thêm các nút vào Ribbon Panel
                 ribbonPanel.AddItem(btnTaoThoData);
                 ribbonPanel.AddItem(btnRebarLongData);
                 ribbonPanel.AddItem(btnRebarOuterData);
                 ribbonPanel.AddItem(btnRebarInnerData);
                 ribbonPanel.AddItem(btnRebarChamferData);
+                ribbonPanel.AddItem(btnRebarStirrupCData);
 
 
 

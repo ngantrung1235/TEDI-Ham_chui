@@ -13,6 +13,10 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     [Transaction(TransactionMode.Manual)]
     public class RebarInnerSingleCommand : IExternalCommand
     {
+        // TODO: se duoc nguoi dung nhap tu giao dien (form nhap lieu) o phien ban sau -
+        // rieng cho nut "Tao thep single ben trong" nay, khong dung chung voi cac nut khac.
+        public const double DefaultSpaceMm = 150.0;
+
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIDocument uidoc = commandData.Application.ActiveUIDocument;
@@ -29,7 +33,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
 
                 double coverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
                 double diamFt = RebarCommon.MmToFt(RebarCommon.DefaultDiamMm);
-                double spaceFt = RebarCommon.MmToFt(RebarCommon.DefaultSpaceMm);
+                double spaceFt = RebarCommon.MmToFt(DefaultSpaceMm);
 
                 var report = new List<string>();
                 var prepared = RebarCommon.PickAndPrepareHosts(uidoc, doc, selectedIds, coverFt, report);
