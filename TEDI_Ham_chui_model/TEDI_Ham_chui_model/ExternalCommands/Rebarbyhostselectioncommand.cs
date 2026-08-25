@@ -370,7 +370,9 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                                 }
                                 else if (layerName == "Ngoai" && !fd.isSlab)
                                 {
-                                    // Bỏ qua lớp Ngoài của Tường vì thép chữ U của bản Đáy/Nắp đã neo xuống tạo thành lớp này
+                                    // Bỏ qua thép NGANG (Bố 2) của lớp Ngoài Tường vì thép chữ U
+                                    // của bản Đáy/Nắp đã neo xuống tạo thành lớp này. Thép DỌC
+                                    // (Bố 1) ở trên vẫn được tạo bình thường cho lớp này.
                                 }
                                 else
                                 {
