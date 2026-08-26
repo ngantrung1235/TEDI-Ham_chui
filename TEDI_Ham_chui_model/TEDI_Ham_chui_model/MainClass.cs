@@ -33,10 +33,18 @@ namespace TEDI_Ham_chui_model
                 PushButtonData btnTestData = new PushButtonData("cmdTest",
                    "Test", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarT13Command");
 
+                // Nút Liên kết (link file .rvt vào model đang mở)
+                PushButtonData btnLienKetData = new PushButtonData("cmdLienKet",
+                   "Liên kết\n(Link)", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.LienKetRevit");
+                btnLienKetData.ToolTip = "Liên kết các file .rvt (Origin to Origin) vào model đang mở.";
+                btnLienKetData.LongDescription = "Chọn từng file .rvt hoặc cả thư mục (ví dụ thư mục kết quả của lệnh Tạo thô). "
+                    + "Các file đã được liên kết sẵn sẽ được bỏ qua để tránh trùng lặp.";
+
                 // Thêm các nút vào Ribbon Panel
                 ribbonPanel.AddItem(btnTaoThoData);
                 ribbonPanel.AddItem(btnTaoThepData);
                 ribbonPanel.AddItem(btnTestData);
+                ribbonPanel.AddItem(btnLienKetData);
 
                 
 
