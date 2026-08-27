@@ -19,6 +19,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
         // TODO: se duoc nguoi dung nhap tu giao dien (form nhap lieu) o phien ban sau -
         // rieng cho nut "Tao Rebar 0 (Nap/Day)" nay, khong dung chung voi cac nut thep khac.
         public const double DefaultSpaceMm = 150.0;
+        public const double DefaultDiamMm = 20.0;
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -63,7 +64,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                         return Result.Failed;
                     }
 
-                    var barType = RebarCommon.GetOrCreateBarType(doc, "D20", RebarCommon.DefaultDiamMm, report);
+                    var barType = RebarCommon.GetOrCreateBarType(doc, "D20", DefaultDiamMm, report);
                     double diamMm = RebarCommon.FtToMm(barType.BarModelDiameter);
 
                     foreach (var h in prepared)
@@ -241,14 +242,17 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                 report.Add($"{hostId}: chieu dai L qua ngan, bo qua thep {(isNap ? "Nap" : "Day")} (Rebar 0).");
                 return 0;
             }
-            int nRows = (int)Math.Ceiling(lLen / spaceFt) + 1;
-            if (nRows < 2) nRows = 2;
-            double rowSpacing = lLen / (nRows - 1);
+            // Rai dung THEO DUNG khoang cach thiet ke spaceFt (150mm) tinh tu loSafe - KHONG
+            // chia deu lai lLen (khoang cach phai dung bang gia tri dau vao). Phan du con lai
+            // o dau xa (hiSafe) neu khong vua het 1 buoc thi BO TRONG.
+            var lRows = new List<double>();
+            for (double p = loSafe; p <= hiSafe; p += spaceFt)
+                lRows.Add(p);
+            int nRows = lRows.Count;
 
             int made = 0;
-            for (int i = 0; i < nRows; i++)
+            foreach (double lRow in lRows)
             {
-                double lRow = loSafe + i * rowSpacing;
 
                 // Do be tong theo Wv o CA HAI cao do (mat ngoai cua lop nay va lop doi
                 // dien), roi lay GIAO cua 2 khoang -> wLoSafe/wHiSafe luon nam trong be

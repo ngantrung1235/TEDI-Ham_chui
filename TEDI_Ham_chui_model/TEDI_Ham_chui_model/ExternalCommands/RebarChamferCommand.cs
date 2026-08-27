@@ -26,7 +26,10 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                     return Result.Failed;
                 }
 
-                double coverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
+                // Dung RebarCommon.LongitudinalCoverMm (nguon DUY NHAT cho lop bao ve) thay vi
+                // RebarCommon.DefaultCoverMm truc tiep, de thep cheo goc dong bo vi tri voi
+                // long ho thep doc (Outer/InnerPos cua FaceDef) tren cung 1 host.
+                double coverFt = RebarCommon.MmToFt(RebarCommon.LongitudinalCoverMm);
                 double chamferSpaceFt = RebarCommon.MmToFt(600); // khop voi "S6-D12-600(AS)" trong ban ve
 
                 var report = new List<string>();

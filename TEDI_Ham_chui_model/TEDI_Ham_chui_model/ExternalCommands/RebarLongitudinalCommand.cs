@@ -15,6 +15,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
         // TODO: se duoc nguoi dung nhap tu giao dien (form nhap lieu) o phien ban sau -
         // rieng cho nut "Tao thep doc" nay, khong dung chung voi cac nut thep khac.
         public const double DefaultSpaceMm = 150.0;
+        public const double DefaultDiamMm = 20.0;
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -30,7 +31,14 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                     return Result.Failed;
                 }
 
-                double coverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
+                // Dung RebarCommon.LongitudinalCoverMm (nguon DUY NHAT cho lop bao ve thep doc,
+                // dung chung voi RebarStirrupCCommand) thay vi RebarCommon.DefaultCoverMm truc tiep,
+                // de 2 nut tao thep doc (nut rieng nay + nut "thep doc + dai C") luon dong bo vi tri.
+                double coverFt = RebarCommon.MmToFt(RebarCommon.LongitudinalCoverMm);
+                // Cover CHUAN (khong cong them duong kinh Rebar 0) dung rieng cho rowLo/rowHi ben
+                // duoi - khoang cach dau thanh thep toi dau cat cua host (dau dot) theo Lv, khong
+                // lien quan gi den Rebar 0 (chi anh huong huong vuong goc mat).
+                double lengthCoverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
                 double spaceFt = RebarCommon.MmToFt(DefaultSpaceMm);
 
                 var report = new List<string>();
@@ -46,7 +54,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                 {
                     t.Start();
 
-                    var barType = RebarCommon.GetOrCreateBarType(doc, "D20", RebarCommon.DefaultDiamMm, report);
+                    var barType = RebarCommon.GetOrCreateBarType(doc, "D20", DefaultDiamMm, report);
 
                     foreach (var h in prepared)
                     {
@@ -55,20 +63,22 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                         {
                             foreach (var pos in new[] { fd.OuterPos, fd.InnerPos })
                             {
-                                double crossLen = fd.CrossMax - fd.CrossMin;
-                                int nRows = (int)Math.Ceiling(crossLen / spaceFt) + 1;
-                                if (nRows < 2) nRows = 2;
-                                double rowSpacing = crossLen / (nRows - 1);
+                                // Rai dung THEO DUNG khoang cach thiet ke spaceFt (150mm) tinh tu
+                                // CrossMin - KHONG chia deu lai crossLen (khoang cach phai dung
+                                // bang gia tri dau vao, khong tu dong co gian). Phan du con lai o
+                                // dau xa (CrossMax) neu khong vua het 1 buoc thi BO TRONG.
+                                var rowCrossPositions = new List<double>();
+                                for (double p = fd.CrossMin; p <= fd.CrossMax; p += spaceFt)
+                                    rowCrossPositions.Add(p);
 
-                                for (int i = 0; i < nRows; i++)
+                                foreach (double crossPos in rowCrossPositions)
                                 {
-                                    double crossPos = fd.CrossMin + i * rowSpacing;
                                     XYZ probeA = fd.IsSlab ? h.L2G(h.LMinRaw, crossPos, pos) : h.L2G(h.LMinRaw, pos, crossPos);
                                     XYZ probeB = fd.IsSlab ? h.L2G(h.LMaxRaw, crossPos, pos) : h.L2G(h.LMaxRaw, pos, crossPos);
                                     var range = RebarCommon.ProbeSolidLRange(h.Solid, probeA, probeB, h.Lv);
                                     if (range == null) continue;
-                                    double rowLo = range.Value.lo + coverFt;
-                                    double rowHi = range.Value.hi - coverFt;
+                                    double rowLo = range.Value.lo + lengthCoverFt;
+                                    double rowHi = range.Value.hi - lengthCoverFt;
                                     if (rowHi - rowLo < RebarCommon.MmToFt(20)) continue;
 
                                     XYZ b1 = fd.IsSlab ? h.L2G(rowLo, crossPos, pos) : h.L2G(rowLo, pos, crossPos);

@@ -47,9 +47,21 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     public static class RebarCommon
     {
         public const double DefaultCoverMm = 50.0;
-        public const double DefaultDiamMm = 20.0;
         public const double DefaultTieDiamMm = 8.0;
         public const double DefaultTieSpaceMm = 200.0;
+
+        // Lop bao ve DUNG CHUNG cho moi thanh thep nam trong "long ho thep" o Outer/InnerPos
+        // cua FaceDef (thep doc RebarLongitudinalCommand/RebarStirrupCCommand, thep single lop
+        // Trong RebarInnerSingleCommand, thep cheo goc vat RebarChamferCommand...) - TRU Rebar 0
+        // (RebarOuterShapeCommand), vi Rebar 0 la lop THEP NGOAI CUNG tai Nap/Day nen no la
+        // MOC THAM CHIEU (dung dung DefaultCoverMm) chu khong dung cong thuc nay.
+        // = DefaultCoverMm (lop bao ve be tong that su, cung la cover cua Rebar 0) CONG THEM
+        // TRON duong kinh Rebar 0 (RebarOuterShapeCommand.DefaultDiamMm) - vi cac thanh thep khac
+        // deu nam PHIA TRONG Rebar 0 nen phai lui vao qua HET be day thanh Rebar 0 (khong phai chi
+        // nua duong kinh) de khong dam/de len no.
+        // CHI SUA O DAY khi doi cong thuc lop bao ve - moi noi khac PHAI goi lai property nay,
+        // KHONG tu tinh rieng tu DefaultCoverMm, de tat ca cac nut tao thep luon dong bo voi nhau.
+        public static double LongitudinalCoverMm => DefaultCoverMm + RebarOuterShapeCommand.DefaultDiamMm;
 
         public static double MmToFt(double mm) => UnitUtils.ConvertToInternalUnits(mm, UnitTypeId.Millimeters);
         public static double FtToMm(double ft) => UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Millimeters);
@@ -278,6 +290,17 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                     continue;
                 }
 
+                // CrossMin/CrossMax (hang dau/cuoi duoc phep cach mep bao nhieu doc theo mat) PHAI
+                // dung CUNG coverFt (co the la LongitudinalCoverMm, da cong them duong kinh Rebar 0)
+                // NHU OuterPos/InnerPos, KHONG duoc dung cover tron rieng: Rebar 0 (Nap/Day) nam tai
+                // dung mat phang Z = zOff[3]-DefaultCoverMm (Nap) hoac zOff[0]+DefaultCoverMm (Day) -
+                // day CHINH LA gia tri CrossMax/CrossMin cua Trai/Phai neu dung cover tron (vi Trai/
+                // Phai lay CrossMin/CrossMax tu chinh zOff[0]/zOff[3] do). Neu Trai/Phai dung cover
+                // tron cho CrossMin/CrossMax, hang dau/cuoi cua chung se ROI DUNG VAO mat phang Z ma
+                // dai C/thep dọc cua Rebar 0 chiem - trung khop hoan toan thay vi tranh nhau. Tuong
+                // tu, hang dau/cuoi cua Nap/Day (CrossMin/CrossMax theo Wv) cung phai tranh dung mat
+                // phang W ma chan Rebar 0 (leg) chiem tai Trai/Phai. Vi vay CA 4 mat deu phai dung
+                // coverFt (LongitudinalCoverMm) cho CrossMin/CrossMax, giong het OuterPos/InnerPos.
                 var facesDef = new[]
                 {
                     new FaceDef { Name = "Day",  IsSlab = true,  OuterPos = zOff[0]+coverFt, InnerPos = zOff[1]-coverFt, CrossMin = wOff[0]+coverFt, CrossMax = wOff[3]-coverFt },
