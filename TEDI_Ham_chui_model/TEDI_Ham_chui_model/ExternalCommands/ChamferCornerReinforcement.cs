@@ -95,16 +95,18 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                 return;
             }
 
-            int nRows = (int)Math.Ceiling(lLen / lSpacingFt) + 1;
-            if (nRows < 2) nRows = 2;
-            double rowSpacing = lLen / (nRows - 1);
+            // Rai dung THEO DUNG khoang cach thiet ke lSpacingFt tinh tu loSafe - KHONG chia
+            // deu lai lLen (khoang cach phai dung bang gia tri dau vao). Phan du con lai o
+            // dau xa (hiSafe) neu khong vua het 1 buoc thi BO TRONG.
+            var lPositions = new List<double>();
+            for (double p = loSafe; p <= hiSafe; p += lSpacingFt)
+                lPositions.Add(p);
 
             foreach (var c in corners)
             {
                 int made = 0;
-                for (int i = 0; i < nRows; i++)
+                foreach (double lPos in lPositions)
                 {
-                    double lPos = loSafe + i * rowSpacing;
 
                     // Tính điểm A, B trên mặt vát (đã lùi vào bê tông)
                     XYZ a = L2G(lPos, c.aWZ[0], c.aWZ[1]) + c.into * coverFt;
