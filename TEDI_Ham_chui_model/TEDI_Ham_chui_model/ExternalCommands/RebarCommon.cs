@@ -37,6 +37,24 @@ namespace TEDI_Ham_chui_model.ExternalCommands
         public FaceDef[] FacesDef;
     }
 
+    // Phan HINH HOC cua 1 host da PICK XONG (3 mat + truc Lv/Wv/Zv + offset W/Z),
+    // KHONG PHU THUOC coverFt - dung de PICK 1 LAN DUY NHAT roi tai su dung cho
+    // nhieu lenh tao thep khac nhau (moi lenh tu dung coverFt rieng cua no de xay
+    // FaceDef qua BuildFacesDef/PrepareHost ben duoi), thay vi moi lenh phai tu goi
+    // lai PickAndPrepareHosts (bat nguoi dung pick lai 3 mat) - xem
+    // RebarAllInOneCommand.cs.
+    public struct HostGeometry
+    {
+        public ElementId Id;
+        public FamilyInstance Inst;
+        public Solid Solid;
+        public XYZ Lv, Wv, Zv;
+        public List<double> WOff;
+        public List<double> ZOff;
+        public double LMinRaw, LMaxRaw;
+        public Func<double, double, double, XYZ> L2G;
+    }
+
     // ====================================================================
     // Ham/du lieu DUNG CHUNG cho toan bo cac lenh tao thep ham chui. Truoc day
     // gop chung trong 1 lenh "Tao thep" duy nhat; nay tach thanh nhieu nut rieng
@@ -241,11 +259,14 @@ namespace TEDI_Ham_chui_model.ExternalCommands
         // truc tiep tu hinh hoc that, roi do offset W/Z va dung san facesDef/L2G.
         // Dung chung cho ca 4 lenh tao thep.
         // =====================================================================
-        public static List<PreparedHost> PickAndPrepareHosts(
-            UIDocument uidoc, Document doc, ICollection<ElementId> selectedIds,
-            double coverFt, List<string> report)
+        // Phan PICK TUONG TAC (3 mat/host) + suy truc Lv/Wv/Zv + offset W/Z - KHONG
+        // phu thuoc coverFt. Goi 1 LAN DUY NHAT roi tai su dung ket qua cho nhieu
+        // lenh tao thep khac nhau (xem RebarAllInOneCommand.cs) thay vi moi lenh tu
+        // pick lai tu dau.
+        public static List<HostGeometry> PickHostGeometry(
+            UIDocument uidoc, Document doc, ICollection<ElementId> selectedIds, List<string> report)
         {
-            var result = new List<PreparedHost>();
+            var result = new List<HostGeometry>();
 
             foreach (var id in selectedIds)
             {
@@ -290,26 +311,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                     continue;
                 }
 
-                // CrossMin/CrossMax (hang dau/cuoi duoc phep cach mep bao nhieu doc theo mat) PHAI
-                // dung CUNG coverFt (co the la LongitudinalCoverMm, da cong them duong kinh Rebar 0)
-                // NHU OuterPos/InnerPos, KHONG duoc dung cover tron rieng: Rebar 0 (Nap/Day) nam tai
-                // dung mat phang Z = zOff[3]-DefaultCoverMm (Nap) hoac zOff[0]+DefaultCoverMm (Day) -
-                // day CHINH LA gia tri CrossMax/CrossMin cua Trai/Phai neu dung cover tron (vi Trai/
-                // Phai lay CrossMin/CrossMax tu chinh zOff[0]/zOff[3] do). Neu Trai/Phai dung cover
-                // tron cho CrossMin/CrossMax, hang dau/cuoi cua chung se ROI DUNG VAO mat phang Z ma
-                // dai C/thep dọc cua Rebar 0 chiem - trung khop hoan toan thay vi tranh nhau. Tuong
-                // tu, hang dau/cuoi cua Nap/Day (CrossMin/CrossMax theo Wv) cung phai tranh dung mat
-                // phang W ma chan Rebar 0 (leg) chiem tai Trai/Phai. Vi vay CA 4 mat deu phai dung
-                // coverFt (LongitudinalCoverMm) cho CrossMin/CrossMax, giong het OuterPos/InnerPos.
-                var facesDef = new[]
-                {
-                    new FaceDef { Name = "Day",  IsSlab = true,  OuterPos = zOff[0]+coverFt, InnerPos = zOff[1]-coverFt, CrossMin = wOff[0]+coverFt, CrossMax = wOff[3]-coverFt },
-                    new FaceDef { Name = "Nap",  IsSlab = true,  OuterPos = zOff[3]-coverFt, InnerPos = zOff[2]+coverFt, CrossMin = wOff[0]+coverFt, CrossMax = wOff[3]-coverFt },
-                    new FaceDef { Name = "Trai", IsSlab = false, OuterPos = wOff[0]+coverFt, InnerPos = wOff[1]-coverFt, CrossMin = zOff[0]+coverFt, CrossMax = zOff[3]-coverFt },
-                    new FaceDef { Name = "Phai", IsSlab = false, OuterPos = wOff[3]-coverFt, InnerPos = wOff[2]+coverFt, CrossMin = zOff[0]+coverFt, CrossMax = zOff[3]-coverFt },
-                };
-
-                result.Add(new PreparedHost
+                result.Add(new HostGeometry
                 {
                     Id = id,
                     Inst = inst,
@@ -322,11 +324,75 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                     LMinRaw = lMinRaw,
                     LMaxRaw = lMaxRaw,
                     L2G = L2G,
-                    FacesDef = facesDef,
                 });
             }
 
             return result;
+        }
+
+        // Xay FaceDef[4] (Day/Nap/Trai/Phai) tu 1 HostGeometry da pick san, THEO coverFt
+        // rieng cua tung lenh goi (cac lenh dung coverFt khac nhau - vd RebarOuterShapeCommand
+        // dung DefaultCoverMm, cac lenh con lai dung LongitudinalCoverMm - xem giai thich
+        // trong LongitudinalCoverMm o tren).
+        //
+        // CrossMin/CrossMax (hang dau/cuoi duoc phep cach mep bao nhieu doc theo mat) PHAI
+        // dung CUNG coverFt (co the la LongitudinalCoverMm, da cong them duong kinh Rebar 0)
+        // NHU OuterPos/InnerPos, KHONG duoc dung cover tron rieng: Rebar 0 (Nap/Day) nam tai
+        // dung mat phang Z = zOff[3]-DefaultCoverMm (Nap) hoac zOff[0]+DefaultCoverMm (Day) -
+        // day CHINH LA gia tri CrossMax/CrossMin cua Trai/Phai neu dung cover tron (vi Trai/
+        // Phai lay CrossMin/CrossMax tu chinh zOff[0]/zOff[3] do). Neu Trai/Phai dung cover
+        // tron cho CrossMin/CrossMax, hang dau/cuoi cua chung se ROI DUNG VAO mat phang Z ma
+        // dai C/thep dọc cua Rebar 0 chiem - trung khop hoan toan thay vi tranh nhau. Tuong
+        // tu, hang dau/cuoi cua Nap/Day (CrossMin/CrossMax theo Wv) cung phai tranh dung mat
+        // phang W ma chan Rebar 0 (leg) chiem tai Trai/Phai. Vi vay CA 4 mat deu phai dung
+        // coverFt (LongitudinalCoverMm) cho CrossMin/CrossMax, giong het OuterPos/InnerPos.
+        public static FaceDef[] BuildFacesDef(HostGeometry hg, double coverFt)
+        {
+            var wOff = hg.WOff;
+            var zOff = hg.ZOff;
+            return new[]
+            {
+                new FaceDef { Name = "Day",  IsSlab = true,  OuterPos = zOff[0]+coverFt, InnerPos = zOff[1]-coverFt, CrossMin = wOff[0]+coverFt, CrossMax = wOff[3]-coverFt },
+                new FaceDef { Name = "Nap",  IsSlab = true,  OuterPos = zOff[3]-coverFt, InnerPos = zOff[2]+coverFt, CrossMin = wOff[0]+coverFt, CrossMax = wOff[3]-coverFt },
+                new FaceDef { Name = "Trai", IsSlab = false, OuterPos = wOff[0]+coverFt, InnerPos = wOff[1]-coverFt, CrossMin = zOff[0]+coverFt, CrossMax = zOff[3]-coverFt },
+                new FaceDef { Name = "Phai", IsSlab = false, OuterPos = wOff[3]-coverFt, InnerPos = wOff[2]+coverFt, CrossMin = zOff[0]+coverFt, CrossMax = zOff[3]-coverFt },
+            };
+        }
+
+        // Ghep 1 HostGeometry (da pick san) + coverFt rieng cua 1 lenh thanh 1 PreparedHost
+        // day du (nhu ket qua PickAndPrepareHosts truoc day), KHONG can pick lai.
+        public static PreparedHost PrepareHost(HostGeometry hg, double coverFt)
+        {
+            return new PreparedHost
+            {
+                Id = hg.Id,
+                Inst = hg.Inst,
+                Solid = hg.Solid,
+                Lv = hg.Lv,
+                Wv = hg.Wv,
+                Zv = hg.Zv,
+                WOff = hg.WOff,
+                ZOff = hg.ZOff,
+                LMinRaw = hg.LMinRaw,
+                LMaxRaw = hg.LMaxRaw,
+                L2G = hg.L2G,
+                FacesDef = BuildFacesDef(hg, coverFt),
+            };
+        }
+
+        public static List<PreparedHost> PrepareHosts(List<HostGeometry> geometries, double coverFt)
+        {
+            return geometries.Select(g => PrepareHost(g, coverFt)).ToList();
+        }
+
+        // Giu nguyen chu ky/hanh vi cu (pick + prepare trong 1 lan goi) cho 4 nut ve thep
+        // dang dung doc lap - nay chi la lop mong goi lai PickHostGeometry + PrepareHosts.
+        public static List<PreparedHost> PickAndPrepareHosts(
+            UIDocument uidoc, Document doc, ICollection<ElementId> selectedIds,
+            double coverFt, List<string> report)
+        {
+            var geometries = PickHostGeometry(uidoc, doc, selectedIds, report);
+            return PrepareHosts(geometries, coverFt);
         }
     }
 }

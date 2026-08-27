@@ -4,7 +4,7 @@ using System.Windows.Media.Imaging;
 using System.IO;
 namespace TEDI_Ham_chui_model
 {
-    
+
         public class MainClass : IExternalApplication
         {
             public Result OnStartup(UIControlledApplication application)
@@ -25,33 +25,17 @@ namespace TEDI_Ham_chui_model
                 PushButtonData btnTaoThoData = new PushButtonData("cmdTaotho",
                    "Tạo thô", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.Tao_tho");
 
-                // Nút Tạo Thép Dọc (Bố 1 - chạy dọc theo Lv, 4 mặt x 2 lớp)
-                PushButtonData btnRebarLongData = new PushButtonData("cmdRebarLong",
-                   "Tạo thép\ndọc", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarLongitudinalCommand");
-
-                // Nút Tạo Rebar 0 Nắp/Đáy (Bố 2 lớp Ngoài của Đáy/Nắp - chữ Z)
-                PushButtonData btnRebarOuterData = new PushButtonData("cmdRebarOuter",
-                   "Tạo Rebar 0\nNắp/Đáy", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarOuterShapeCommand");
-
-                // Nút Tạo Thép Single Bên Trong (Bố 2 lớp Trong, cả 4 mặt)
-                PushButtonData btnRebarInnerData = new PushButtonData("cmdRebarInner",
-                   "Tạo thép\nsingle trong", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarInnerSingleCommand");
-
-                // Nút Tạo Thép Chéo Góc Vát (Chamfer)
-                PushButtonData btnRebarChamferData = new PushButtonData("cmdRebarChamfer",
-                   "Tạo thép\nchéo", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarChamferCommand");
-
-                // Nút Tạo Thép Dọc + Đai C (thép dọc 4 mặt x 2 lớp, kèm đai C nối lớp Ngoài-Trong)
-                PushButtonData btnRebarStirrupCData = new PushButtonData("cmdRebarStirrupC",
-                   "Tạo thép dọc\n+ đai C", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarStirrupCCommand");
+                // Nút Vẽ Tất Cả Thép (pick 1 lần, gọi lần lượt RunOnPrepared của StirrupC +
+                // Outer + Inner + Chamfer - xem RebarAllInOneCommand.cs). Đây là nút DUY NHẤT
+                // để vẽ thép; RebarStirrupCCommand/RebarOuterShapeCommand/RebarInnerSingleCommand/
+                // RebarChamferCommand không còn là nút riêng, chỉ còn hàm RunOnPrepared() vẽ
+                // theo giá trị + selection (List<PreparedHost>) truyền vào.
+                PushButtonData btnRebarAllInOneData = new PushButtonData("cmdRebarAllInOne",
+                   "Vẽ tất cả\nthép", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarAllInOneCommand");
 
                 // Thêm các nút vào Ribbon Panel
                 ribbonPanel.AddItem(btnTaoThoData);
-                ribbonPanel.AddItem(btnRebarLongData);
-                ribbonPanel.AddItem(btnRebarOuterData);
-                ribbonPanel.AddItem(btnRebarInnerData);
-                ribbonPanel.AddItem(btnRebarChamferData);
-                ribbonPanel.AddItem(btnRebarStirrupCData);
+                ribbonPanel.AddItem(btnRebarAllInOneData);
 
 
 

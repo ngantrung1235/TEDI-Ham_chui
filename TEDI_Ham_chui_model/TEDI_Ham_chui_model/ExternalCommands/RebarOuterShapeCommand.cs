@@ -3,68 +3,48 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
-using Autodesk.Revit.UI;
 
 namespace TEDI_Ham_chui_model.ExternalCommands
 {
-    // Nut "Tao Rebar 0 (Nap/Day)": Bo 2 cua LOP NGOAI tren 2 mat Day/Nap, dung
-    // RebarShape "Rebar 0" dang chu Z de noi lien mach thep ngoai cua ban voi
-    // thep ngoai cua tuong qua goc. Xem chi tiet trong ShapeDrivenOuterRebar ben duoi.
-    [Transaction(TransactionMode.Manual)]
-    public class RebarOuterShapeCommand : IExternalCommand
+    // Bo 2 cua LOP NGOAI tren 2 mat Day/Nap, dung RebarShape "Rebar 0" dang chu Z
+    // de noi lien mach thep ngoai cua ban voi thep ngoai cua tuong qua goc. Xem
+    // chi tiet trong ShapeDrivenOuterRebar ben duoi.
+    //
+    // KHONG con la nut rieng (IExternalCommand) - chi con RunOnPrepared() de
+    // RebarAllInOneCommand goi voi 1 List<PreparedHost> da pick san (xem
+    // RebarAllInOneCommand.cs, nut "Vẽ tất cả thép" duy nhat).
+    public static class RebarOuterShapeCommand
     {
         // TODO: se duoc nguoi dung nhap tu giao dien (form nhap lieu) o phien ban sau -
-        // rieng cho nut "Tao Rebar 0 (Nap/Day)" nay, khong dung chung voi cac nut thep khac.
+        // rieng cho Rebar 0 (Nap/Day) nay, khong dung chung voi cac lenh thep khac.
         public const double DefaultSpaceMm = 150.0;
         public const double DefaultDiamMm = 20.0;
 
-        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+        public static string RunOnPrepared(Document doc, List<PreparedHost> prepared, List<string> report)
         {
-            UIDocument uidoc = commandData.Application.ActiveUIDocument;
-            Document doc = uidoc.Document;
+            double spaceFt = RebarCommon.MmToFt(DefaultSpaceMm);
+            double coverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
 
-            try
+            int totalCount = 0;
+            using (Transaction t = new Transaction(doc, "Tạo thép Rebar 0 (Nắp/Đáy)"))
             {
-                var selectedIds = uidoc.Selection.GetElementIds();
-                if (selectedIds.Count == 0)
+                t.Start();
+
+                RebarShape rebarShape0;
+                try
                 {
-                    message = "Vui lòng chọn ít nhất 1 cấu kiện trước khi chạy tool.";
-                    return Result.Failed;
+                    rebarShape0 = ShapeDrivenOuterRebar.FindOrLoadRebarShape(doc);
+                    report.Add("Đã load RebarShape 'Rebar 0'.");
+                }
+                catch (Exception ex)
+                {
+                    t.RollBack();
+                    throw new InvalidOperationException($"Lỗi load RebarShape 'Rebar 0': {ex.Message}", ex);
                 }
 
-                double coverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
-                double spaceFt = RebarCommon.MmToFt(DefaultSpaceMm);
-
-                var report = new List<string>();
-                var prepared = RebarCommon.PickAndPrepareHosts(uidoc, doc, selectedIds, coverFt, report);
-                if (prepared.Count == 0)
-                {
-                    message = "Không có cấu kiện hợp lệ nào để tạo thép sau bước pick.";
-                    return Result.Failed;
-                }
-
-                int totalCount = 0;
-                using (Transaction t = new Transaction(doc, "Tạo thép Rebar 0 (Nắp/Đáy)"))
-                {
-                    t.Start();
-
-                    RebarShape rebarShape0;
-                    try
-                    {
-                        rebarShape0 = ShapeDrivenOuterRebar.FindOrLoadRebarShape(doc);
-                        report.Add("Đã load RebarShape 'Rebar 0'.");
-                    }
-                    catch (Exception ex)
-                    {
-                        t.RollBack();
-                        message = $"Lỗi load RebarShape 'Rebar 0': {ex.Message}";
-                        return Result.Failed;
-                    }
-
-                    var barType = RebarCommon.GetOrCreateBarType(doc, "D20", DefaultDiamMm, report);
+                var barType = RebarCommon.GetOrCreateBarType(doc, "D20", DefaultDiamMm, report);
                     double diamMm = RebarCommon.FtToMm(barType.BarModelDiameter);
 
                     foreach (var h in prepared)
@@ -102,19 +82,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                     t.Commit();
                 }
 
-                TaskDialog.Show("Thành công",
-                    $"Đã tạo tổng cộng {totalCount} thanh Rebar 0.\n\nChi tiết:\n" + string.Join("\n", report));
-                return Result.Succeeded;
-            }
-            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
-            {
-                return Result.Cancelled;
-            }
-            catch (Exception ex)
-            {
-                message = ex.Message + "\n" + ex.StackTrace;
-                return Result.Failed;
-            }
+            return $"Đã tạo tổng cộng {totalCount} thanh Rebar 0.\n\nChi tiết:\n" + string.Join("\n", report);
         }
     }
 

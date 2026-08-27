@@ -1,19 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
-using Autodesk.Revit.UI;
 
 namespace TEDI_Ham_chui_model.ExternalCommands
 {
-    // Nut "Tao thep doc + dai C": lam lai toan bo viec cua RebarLongitudinalCommand
-    // (thep doc chay theo Lv, tung thanh rieng bam sat bien solid, ca 4 mat x 2 lop
-    // Ngoai/Trong), sau do tao THEM cac dai chu C noi thanh lop Ngoai voi thanh lop
-    // Trong (khong noi 2 thanh canh nhau trong cung 1 lop). Dai C dung 2 spacing
-    // DOC LAP voi spacing thep doc: theo phuong ngang mat (Wv/cross) cac hang dai C
-    // duoc chia deu theo RebarStirrupCCommon.DefaultCTieSpacingMm (giong het cach
+    // Thep doc chay theo Lv, tung thanh rieng bam sat bien solid, ca 4 mat x 2 lop
+    // Ngoai/Trong, cong THEM cac dai chu C noi thanh lop Ngoai voi thanh lop Trong
+    // (khong noi 2 thanh canh nhau trong cung 1 lop). Dai C dung 2 spacing DOC LAP
+    // voi spacing thep doc: theo phuong ngang mat (Wv/cross) cac hang dai C duoc
+    // chia deu theo RebarStirrupCCommon.DefaultCTieSpacingMm (giong het cach
     // spaceFt chia hang thep doc), va theo phuong Lv cung rai deu voi cung
     // DefaultCTieSpacingMm do (xem CreateOuterInnerTies).
     //
@@ -22,50 +19,28 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     // vi ban Revit API dang dung KHONG con enum RebarHookOrientation nen khong the
     // dung tham so hook rieng cho CreateFromCurves nhu ban cu (xem ghi chu tuong tu
     // trong RebarOuterShapeCommand.cs).
-    [Transaction(TransactionMode.Manual)]
-    public class RebarStirrupCCommand : IExternalCommand
+    //
+    // KHONG con la nut rieng (IExternalCommand) - chi con RunOnPrepared() de
+    // RebarAllInOneCommand goi voi 1 List<PreparedHost> da pick san (xem
+    // RebarAllInOneCommand.cs, nut "Vẽ tất cả thép" duy nhat).
+    public static class RebarStirrupCCommand
     {
-        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+        public static string RunOnPrepared(Document doc, List<PreparedHost> prepared, List<string> report)
         {
-            UIDocument uidoc = commandData.Application.ActiveUIDocument;
-            Document doc = uidoc.Document;
+            // Cover CHUAN (khong cong them duong kinh Rebar 0) dung rieng cho cac cho CAT
+            // THEO CHIEU DAI Lv (oLo/oHi/iLo/iHi ben duoi) - day la khoang cach dau thanh
+            // thep toi dau cat cua host (dau dot), KHONG lien quan gi den Rebar 0 (Rebar 0
+            // chi anh huong huong vuong goc mat, khong anh huong doc Lv).
+            double lengthCoverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
+            double spaceFt = RebarCommon.MmToFt(RebarStirrupCCommon.DefaultLongSpaceMm);
+            double tieSpaceFt = RebarCommon.MmToFt(RebarStirrupCCommon.DefaultCTieSpacingMm);
 
-            try
+            int totalLong = 0, totalTie = 0;
+            using (Transaction t = new Transaction(doc, "Tạo thép dọc + đai C"))
             {
-                var selectedIds = uidoc.Selection.GetElementIds();
-                if (selectedIds.Count == 0)
-                {
-                    message = "Vui lòng chọn ít nhất 1 cấu kiện trước khi chạy tool.";
-                    return Result.Failed;
-                }
+                t.Start();
 
-                // Lop bao ve cua thep doc: dung RebarCommon.LongitudinalCoverMm (nguon DUY NHAT,
-                // dung chung voi RebarLongitudinalCommand/RebarInnerSingleCommand/RebarChamferCommand)
-                // thay vi tu tinh rieng o day, de doi cong thuc 1 cho la moi nut tao thep deu
-                // dong bo theo, khong con phai sua tay tung file.
-                double coverFt = RebarCommon.MmToFt(RebarCommon.LongitudinalCoverMm);
-                // Cover CHUAN (khong cong them duong kinh Rebar 0) dung rieng cho cac cho CAT
-                // THEO CHIEU DAI Lv (oLo/oHi/iLo/iHi ben duoi) - day la khoang cach dau thanh
-                // thep toi dau cat cua host (dau dot), KHONG lien quan gi den Rebar 0 (Rebar 0
-                // chi anh huong huong vuong goc mat, khong anh huong doc Lv).
-                double lengthCoverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
-                double spaceFt = RebarCommon.MmToFt(RebarStirrupCCommon.DefaultLongSpaceMm);
-                double tieSpaceFt = RebarCommon.MmToFt(RebarStirrupCCommon.DefaultCTieSpacingMm);
-
-                var report = new List<string>();
-                var prepared = RebarCommon.PickAndPrepareHosts(uidoc, doc, selectedIds, coverFt, report);
-                if (prepared.Count == 0)
-                {
-                    message = "Không có cấu kiện hợp lệ nào để tạo thép sau bước pick.";
-                    return Result.Failed;
-                }
-
-                int totalLong = 0, totalTie = 0;
-                using (Transaction t = new Transaction(doc, "Tạo thép dọc + đai C"))
-                {
-                    t.Start();
-
-                    var barType = RebarCommon.GetOrCreateBarType(doc, "D20", RebarStirrupCCommon.DefaultLongDiamMm, report);
+                var barType = RebarCommon.GetOrCreateBarType(doc, "D20", RebarStirrupCCommon.DefaultLongDiamMm, report);
                     var tieBarType = RebarStirrupCCommon.GetOrCreateTightBendTieType(
                         doc, RebarCommon.GetOrCreateBarType(doc, "D8", RebarStirrupCCommon.DefaultCTieDiamMm, report),
                         RebarStirrupCCommon.DefaultLongDiamMm, RebarStirrupCCommon.DefaultCTieDiamMm, report);
@@ -221,19 +196,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                     t.Commit();
                 }
 
-                TaskDialog.Show("Thành công",
-                    $"Đã tạo tổng cộng {totalLong} thanh thép dọc và {totalTie} đai C.\n\nChi tiết:\n" + string.Join("\n", report));
-                return Result.Succeeded;
-            }
-            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
-            {
-                return Result.Cancelled;
-            }
-            catch (Exception ex)
-            {
-                message = ex.Message + "\n" + ex.StackTrace;
-                return Result.Failed;
-            }
+            return $"Đã tạo tổng cộng {totalLong} thanh thép dọc và {totalTie} đai C.\n\nChi tiết:\n" + string.Join("\n", report);
         }
     }
 
