@@ -273,7 +273,7 @@ namespace TEDI_Ham_chui_model.ViewModels
         {
             string assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
             string addinFolder = Path.GetDirectoryName(assemblyPath);
-            string templateFilePath = Path.Combine(addinFolder, "Models", "HamChui_KM77+633.rvt");
+            string templateFilePath = Path.Combine(addinFolder, "SampleModels", "HamChui_KM77+633.rvt");
 
             if (!File.Exists(templateFilePath))
             {

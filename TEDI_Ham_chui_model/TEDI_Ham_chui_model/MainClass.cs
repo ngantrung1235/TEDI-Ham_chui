@@ -27,8 +27,8 @@ namespace TEDI_Ham_chui_model
 
                 // Nút Vẽ Tất Cả Thép (pick 1 lần, gọi lần lượt RunOnPrepared của StirrupC +
                 // Outer + Inner + Chamfer - xem RebarAllInOneCommand.cs). Đây là nút DUY NHẤT
-                // để vẽ thép; RebarStirrupCCommand/RebarOuterShapeCommand/RebarInnerSingleCommand/
-                // RebarChamferCommand không còn là nút riêng, chỉ còn hàm RunOnPrepared() vẽ
+                // để vẽ thép; RebarStirrupCLogic/RebarOuterShapeLogic/RebarInnerSingleLogic/
+                // RebarChamferLogic không còn là nút riêng, chỉ còn hàm RunOnPrepared() vẽ
                 // theo giá trị + selection (List<PreparedHost>) truyền vào.
                 PushButtonData btnRebarAllInOneData = new PushButtonData("cmdRebarAllInOne",
                    "Vẽ tất cả\nthép", thisAssemblyPath, "TEDI_Ham_chui_model.ExternalCommands.RebarAllInOneCommand");
