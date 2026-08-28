@@ -4,7 +4,7 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 
-namespace TEDI_Ham_chui_model.ExternalCommands
+namespace TEDI_Ham_chui_model.Models
 {
     // ============================================================================
     // Class chuyen dung de ve THANH THEP CHEO GIA CUONG GOC VAT (Chamfer)

@@ -4,46 +4,71 @@ using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 
-namespace TEDI_Ham_chui_model.ExternalCommands
+namespace TEDI_Ham_chui_model.Models
 {
     // Thep doc chay theo Lv, tung thanh rieng bam sat bien solid, ca 4 mat x 2 lop
     // Ngoai/Trong, cong THEM cac dai chu C noi thanh lop Ngoai voi thanh lop Trong
     // (khong noi 2 thanh canh nhau trong cung 1 lop). Dai C dung 2 spacing DOC LAP
     // voi spacing thep doc: theo phuong ngang mat (Wv/cross) cac hang dai C duoc
-    // chia deu theo RebarStirrupCCommon.DefaultCTieSpacingMm (giong het cach
+    // chia deu theo spacing dai C nguoi dung nhap (giong het cach
     // spaceFt chia hang thep doc), va theo phuong Lv cung rai deu voi cung
-    // DefaultCTieSpacingMm do (xem CreateOuterInnerTies).
+    // spacing do (xem CreateOuterInnerTies).
     //
     // Dai C hinh chu "C": than dai chay doc truc do sau (tu OuterPos toi InnerPos),
     // 2 dau bo mop cung 1 huong ngang (cross) - dung 3 doan thang (hook - than - hook)
     // vi ban Revit API dang dung KHONG con enum RebarHookOrientation nen khong the
     // dung tham so hook rieng cho CreateFromCurves nhu ban cu (xem ghi chu tuong tu
-    // trong RebarOuterShapeCommand.cs).
+    // trong RebarOuterShapeLogic.cs).
     //
     // KHONG con la nut rieng (IExternalCommand) - chi con RunOnPrepared() de
     // RebarAllInOneCommand goi voi 1 List<PreparedHost> da pick san (xem
     // RebarAllInOneCommand.cs, nut "Vẽ tất cả thép" duy nhat).
-    public static class RebarStirrupCCommand
+    public static class RebarStirrupCLogic
     {
-        public static string RunOnPrepared(Document doc, List<PreparedHost> prepared, List<string> report)
+        // diamS4Mm/spaceS4Mm = thep doc mat Nap ("S4"), diamF4Mm/spaceF4Mm = mat Day
+        // ("F4"), diamH2Mm/spaceH2Mm = mat Trai+Phai ("H2"). diamS6Mm/spaceS6Mm = dai C
+        // mat Nap ("S6"), diamF6Mm/spaceF6Mm = mat Day ("F6"), diamH3Mm/spaceH3Mm = mat
+        // Trai+Phai ("H3"). Moi nhom co RebarBarType RIENG. Nguoi goi (RebarAllInOneViewModel)
+        // LUON truyen du ca 12 gia tri nay.
+        public static string RunOnPrepared(
+            Document doc, List<PreparedHost> prepared, List<string> report,
+            double diamS4Mm, double spaceS4Mm,
+            double diamF4Mm, double spaceF4Mm,
+            double diamH2Mm, double spaceH2Mm,
+            double diamS6Mm, double spaceS6Mm,
+            double diamF6Mm, double spaceF6Mm,
+            double diamH3Mm, double spaceH3Mm)
         {
-            // Cover CHUAN (khong cong them duong kinh Rebar 0) dung rieng cho cac cho CAT
+            // Cover CHUAN (khong cong them duong kinh Rebar_21) dung rieng cho cac cho CAT
             // THEO CHIEU DAI Lv (oLo/oHi/iLo/iHi ben duoi) - day la khoang cach dau thanh
-            // thep toi dau cat cua host (dau dot), KHONG lien quan gi den Rebar 0 (Rebar 0
+            // thep toi dau cat cua host (dau dot), KHONG lien quan gi den Rebar_21 (Rebar_21
             // chi anh huong huong vuong goc mat, khong anh huong doc Lv).
             double lengthCoverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
-            double spaceFt = RebarCommon.MmToFt(RebarStirrupCCommon.DefaultLongSpaceMm);
-            double tieSpaceFt = RebarCommon.MmToFt(RebarStirrupCCommon.DefaultCTieSpacingMm);
 
             int totalLong = 0, totalTie = 0;
             using (Transaction t = new Transaction(doc, "Tạo thép dọc + đai C"))
             {
                 t.Start();
 
-                var barType = RebarCommon.GetOrCreateBarType(doc, "D20", RebarStirrupCCommon.DefaultLongDiamMm, report);
-                    var tieBarType = RebarStirrupCCommon.GetOrCreateTightBendTieType(
-                        doc, RebarCommon.GetOrCreateBarType(doc, "D8", RebarStirrupCCommon.DefaultCTieDiamMm, report),
-                        RebarStirrupCCommon.DefaultLongDiamMm, RebarStirrupCCommon.DefaultCTieDiamMm, report);
+                // Tao RebarBarType (thao tac ghi vao model) PHAI nam trong Transaction da
+                // Start() - dat truoc do se nem "Attempt to modify the model outside of
+                // transaction".
+                var barTypeS4 = RebarCommon.GetOrCreateBarType(doc, $"S4-D{diamS4Mm:F0}-{spaceS4Mm:F0}", diamS4Mm, report);
+                var barTypeF4 = RebarCommon.GetOrCreateBarType(doc, $"F4-D{diamF4Mm:F0}-{spaceF4Mm:F0}", diamF4Mm, report);
+                var barTypeH2 = RebarCommon.GetOrCreateBarType(doc, $"H2-D{diamH2Mm:F0}-{spaceH2Mm:F0}", diamH2Mm, report);
+                double spaceFtS4 = RebarCommon.MmToFt(spaceS4Mm);
+                double spaceFtF4 = RebarCommon.MmToFt(spaceF4Mm);
+                double spaceFtH2 = RebarCommon.MmToFt(spaceH2Mm);
+
+                var tieBarTypeS6 = RebarStirrupCCommon.GetOrCreateTightBendTieType(
+                    doc, RebarCommon.GetOrCreateBarType(doc, $"S6-D{diamS6Mm:F0}-{spaceS6Mm:F0}", diamS6Mm, report), diamS4Mm, diamS6Mm, report);
+                var tieBarTypeF6 = RebarStirrupCCommon.GetOrCreateTightBendTieType(
+                    doc, RebarCommon.GetOrCreateBarType(doc, $"F6-D{diamF6Mm:F0}-{spaceF6Mm:F0}", diamF6Mm, report), diamF4Mm, diamF6Mm, report);
+                var tieBarTypeH3 = RebarStirrupCCommon.GetOrCreateTightBendTieType(
+                    doc, RebarCommon.GetOrCreateBarType(doc, $"H3-D{diamH3Mm:F0}-{spaceH3Mm:F0}", diamH3Mm, report), diamH2Mm, diamH3Mm, report);
+                double tieSpaceFtS6 = RebarCommon.MmToFt(spaceS6Mm);
+                double tieSpaceFtF6 = RebarCommon.MmToFt(spaceF6Mm);
+                double tieSpaceFtH3 = RebarCommon.MmToFt(spaceH3Mm);
 
                     foreach (var h in prepared)
                     {
@@ -51,12 +76,30 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                         var tieRecords = new List<RebarStirrupCCommon.TieRecord>();
                         foreach (var fd in h.FacesDef)
                         {
+                            RebarBarType barType; double spaceFt; double barDiamMmFace;
+                            RebarBarType tieBarType; double tieSpaceFt; double tieDiamMmFace;
+                            if (fd.Name == "Nap")
+                            {
+                                barType = barTypeS4; spaceFt = spaceFtS4; barDiamMmFace = diamS4Mm;
+                                tieBarType = tieBarTypeS6; tieSpaceFt = tieSpaceFtS6; tieDiamMmFace = diamS6Mm;
+                            }
+                            else if (fd.Name == "Day")
+                            {
+                                barType = barTypeF4; spaceFt = spaceFtF4; barDiamMmFace = diamF4Mm;
+                                tieBarType = tieBarTypeF6; tieSpaceFt = tieSpaceFtF6; tieDiamMmFace = diamF6Mm;
+                            }
+                            else
+                            {
+                                barType = barTypeH2; spaceFt = spaceFtH2; barDiamMmFace = diamH2Mm;
+                                tieBarType = tieBarTypeH3; tieSpaceFt = tieSpaceFtH3; tieDiamMmFace = diamH3Mm;
+                            }
+
                             // --- Thep doc: rai dung THEO DUNG khoang cach thiet ke spaceFt (150mm)
                             // tinh tu CrossMin - KHONG chia deu lai crossLen (giong het nguyen tac
                             // da ap dung cho dai C: khoang cach phai dung bang gia tri dau vao,
                             // khong duoc tu dong co gian). Phan du con lai o dau xa (CrossMax) neu
                             // khong vua het 1 buoc thi BO TRONG, khong ep them hang nao ca. Vi
-                            // DefaultCTieSpacingMm (600mm) = 4 x DefaultLongSpaceMm (150mm), cu moi
+                            // spacing dai C (mac dinh 600mm) = 4 x spacing thep doc (mac dinh 150mm) NEU dung so mac dinh, cu moi
                             // 4 hang thep doc se co 1 hang trung khop voi 1 hang dai C.
                             var rowCrossPositions = new List<double>();
                             for (double p = fd.CrossMin; p <= fd.CrossMax; p += spaceFt)
@@ -95,13 +138,13 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                             // --- Dai C: rai rieng theo tieSpaceFt (khoang cach dai C), DOC LAP voi
                             // hang thep doc o tren - khong con phu thuoc chi so hang i cua thep doc
                             // (khong con bo hang goc / chi giu hang chan), ma phuong ngang (cross)
-                            // cung duoc chia deu theo DefaultCTieSpacingMm giong het cach spaceFt
+                            // cung duoc chia deu theo spacing dai C nguoi dung nhap, giong het cach spaceFt
                             // chia hang thep doc theo phuong Lv.
                             //
                             // Truoc khi chia hang, DO TIM ranh gioi an toan o CA 2 dau CrossMin/
                             // CrossMax (RebarStirrupCCommon.FindSafeCrossEdge) - de tranh cac hang
                             // dai C rot vao vung tiet dien bi VAT GOC (vd 2 goc vat tren cua mat
-                            // Trai/Phai, noi giap Nap - xem RebarChamferCommand.cs), la vung tiet
+                            // Trai/Phai, noi giap Nap - xem RebarChamferLogic.cs), la vung tiet
                             // dien thu hep phi tuyen nen RAT nhay cam moi khi doi lop bao ve
                             // (coverFt) - chinh la nguyen nhan gay "lech" hang dai C quan sat duoc.
                             // Dau nao khong dinh vat (vd Day, hoac dau CrossMin cua Trai/Phai giap
@@ -124,23 +167,40 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                             // thanh nao ca (dung yeu cau: khoang cach phai dung 600mm nhu dau vao,
                             // khong duoc phep co 1 doan le hut ngan hon o cuoi).
                             //
-                            // LUOT 2 (theo yeu cau): rai THEM 1 lan doc lap tu safeCrossMax lui dan,
-                            // cung dung DUNG tieSpaceFt lam input - khong chia deu lai, khong ep
-                            // them/bot gi khac, khong loc trung (nguoi dung da tu thiet ke dau vao
-                            // de khong xay ra trung nhau giua 2 luot).
+                            // LUOT 2 (theo thiet ke moi): dai C luot 2 XEN KE GIUA 2 dai C luot 1
+                            // theo CA 2 phuong - vua theo phuong cross (Wv/Zv, nhin vao se thay luot 2
+                            // nam CHINH GIUA 2 dai luot 1 lien tiep) vua theo phuong doc Lv (dat sau
+                            // hon 1 doan tieSpaceFt/2, xem khoi comment ben duoi). Ca 2 luot CUNG neo
+                            // tai safeCrossMin (KHONG con neo tai safeCrossMax nua) - luot 2 chi lech
+                            // 1 khoang co dinh tieSpaceFt/2 so voi luot 1.
+                            //
+                            // Vi sao van luon trung dung 1 hang thep doc that (khong con bi "noi troi"
+                            // nhu truoc day khi neo tai safeCrossMax): tieSpaceFt (600mm) = 4 x spaceFt
+                            // (mac dinh 150mm), nen tieSpaceFt/2
+                            // (300mm) = 2 x spaceFt LUON LUON la boi so CHAN cua spaceFt, bat ke hinh
+                            // hoc mat cat the nao. Vi luot 1 (neo safeCrossMin, buoc tieSpaceFt) da
+                            // dam bao trung luoi thep doc (dong bo voi vong lap "rowCrossPositions" o
+                            // tren, cung neo safeCrossMin), luot 2 neo tai "safeCrossMin + spaceFt*2"
+                            // roi cung buoc tieSpaceFt se TU DONG trung 1 hang thep doc KHAC (cach hang
+                            // luot 1 dung 2 buoc spaceFt = giua 2 hang luot 1 lien tiep cua chinh no,
+                            // vi 1 chu ky tieSpaceFt = 4 hang thep doc) - khong can snap/lam tron gi
+                            // them, khac voi cach neo tai safeCrossMax (1 diem hinh hoc bat ky, KHONG
+                            // dam bao la boi so cua spaceFt tinh tu safeCrossMin) da gay loi dai C
+                            // lech luoi 40mm o phien ban truoc.
+                            double crossOffsetPass2Ft = tieSpaceFt / 2.0;
                             //
                             // Rieng doc theo phuong Lv (ben trong CreateOuterInnerTies): cac dai C
-                            // cua LUOT 2 (tu safeCrossMax) phai bat dau lech so voi luot 1 mot doan
-                            // dung bang NUA buoc tieSpaceFt (vd 600mm -> lech 300mm), tuc diem dau
-                            // tien theo Lv cua luot 2 = diem dau tien theo Lv cua luot 1 + tieSpaceFt/2.
-                            // Dung tieCrossEntries (kem lLvOffsetFt rieng cho tung luot) de truyen
-                            // xuong CreateOuterInnerTies ben duoi.
+                            // cua LUOT 2 phai bat dau lech so voi luot 1 mot doan dung bang NUA buoc
+                            // tieSpaceFt (vd 600mm -> lech 300mm), tuc diem dau tien theo Lv cua luot 2
+                            // = diem dau tien theo Lv cua luot 1 + tieSpaceFt/2. Dung tieCrossEntries
+                            // (kem lLvOffsetFt rieng cho tung luot) de truyen xuong CreateOuterInnerTies
+                            // ben duoi.
                             double lLvOffsetPass2Ft = tieSpaceFt / 2.0;
                             var tieCrossEntries = new List<(double CrossPos, double LOffsetFt)>();
                             for (double pos = safeCrossMin; pos <= safeCrossMax; pos += tieSpaceFt)
                                 tieCrossEntries.Add((pos, 0.0));
 
-                            for (double pos = safeCrossMax; pos >= safeCrossMin; pos -= tieSpaceFt)
+                            for (double pos = safeCrossMin + crossOffsetPass2Ft; pos <= safeCrossMax; pos += tieSpaceFt)
                                 tieCrossEntries.Add((pos, lLvOffsetPass2Ft));
 
                             // TCVN 11823 Muc 10.6.3 gioi han khoang cach toi da giua cac moc giu cu
@@ -176,7 +236,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                                 if (tieHi - tieLo < RebarCommon.MmToFt(20)) continue;
 
                                 var madeTies = RebarStirrupCCommon.CreateOuterInnerTies(
-                                    doc, h, fd, crossPos, tieLo, tieHi, tieBarType, RebarStirrupCCommon.DefaultLongDiamMm, tieSpaceFt, report, lOffsetFt);
+                                    doc, h, fd, crossPos, tieLo, tieHi, tieBarType, barDiamMmFace, tieDiamMmFace, tieSpaceFt, report, lOffsetFt);
                                 tieRecords.AddRange(madeTies);
                             }
                         }
@@ -206,8 +266,8 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     // phang (cross, do sau) tai 1 vi tri L co dinh.
     //
     // MAT DO THEO PHUONG NGANG (chieu rong mat): so hang crossPos duoc Execute() chia
-    // deu rieng theo DefaultCTieSpacingMm (doc lap voi so hang thep doc, von chia theo
-    // DefaultLongSpaceMm) - xem canh bao TCVN 11823 Muc 10.6.3 (610mm) trong Execute().
+    // deu rieng theo spacing dai C nguoi dung nhap (doc lap voi so hang thep doc, von chia theo
+    // spacing thep doc) - xem canh bao TCVN 11823 Muc 10.6.3 (610mm) trong Execute().
     //
     // QUAN TRONG (fix rai lech khi host bi xien goc >3 do):
     // Truoc day dai C duoc tao 1 LAN duy nhat bang Rebar.CreateFromCurves roi rai
@@ -221,7 +281,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     // Cach sua: BO HAN co che rai bang SetLayoutAsNumberWithSpacing. Thay vao do, voi
     // moi vi tri "l" thuc te (tinh truoc, cach deu nhau ~tieSpacingFt trong doan
     // [lLo, lHi]) ta goi lai dung ham Pt(h, fd, l, cross, depth) - CHINH XAC cong thuc
-    // ma thep doc (RebarStirrupCCommand.Execute) da dung de dung diem oP1/oP2/iP1/iP2
+    // ma thep doc (RebarStirrupCLogic.Execute) da dung de dung diem oP1/oP2/iP1/iP2
     // - roi tao TUNG dai C RIENG LE bang Rebar.CreateFromCurves tai vi tri do. Vi moi
     // dai deu tu tinh diem bang Pt() (chinh cong thuc L2G that, khong suy dien qua
     // vector normal co dinh), dai C se LUON bam dung theo thep doc du Lv/Wv co xien
@@ -233,21 +293,6 @@ namespace TEDI_Ham_chui_model.ExternalCommands
     // ============================================================================
     public static class RebarStirrupCCommon
     {
-        // ============================================================================
-        // TODO: các giá trị này sẽ được người dùng NHẬP TỪ GIAO DIỆN (form nhập liệu) ở
-        // phiên bản sau, thay vì hard-code như hiện tại - đây là nguồn duy nhất cho cả
-        // Execute() lẫn CreateOuterInnerTies() bên dưới, chỉ cần sửa các dòng này (hoặc
-        // đổi thành tham số truyền vào) khi có form nhập liệu, không cần sửa gì khác.
-        // Trước mắt: spacing thép dọc mặc định 150mm, đường kính thép dọc mặc định 20mm,
-        // đường kính đai C mặc định 8mm, khoảng cách đai C 600mm. Spacing/đường kính thép
-        // dọc dùng riêng cho nút "Tạo thép dọc + đai C" này, KHÔNG dùng chung với
-        // RebarLongitudinalCommand hay các nút thép khác.
-        // ============================================================================
-        public const double DefaultLongSpaceMm = 150.0;
-        public const double DefaultLongDiamMm = 20.0;
-        public const double DefaultCTieDiamMm = 8.0;
-        public const double DefaultCTieSpacingMm = 600.0;
-
         // Kiem tra 1 crossPos co "do duoc" hop le hay khong (dung DUNG y het tieu chi ma vong
         // lap rai hang dai C se dung: outer/inner probe khong null, moi lop >=20mm, va phan
         // GIAO 2 lop >=20mm) - dung chung cho ca vong rai THAT lan ham do bien an toan ben duoi.
@@ -273,7 +318,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
         }
 
         // Neu chinh dau "nominalEdge" (vd CrossMax cua mat Trai/Phai - dau giap goc vat tren voi
-        // Nap, xem RebarChamferCommand.cs) da KHONG con do duoc be tong hop le, do BINARY SEARCH
+        // Nap, xem RebarChamferLogic.cs) da KHONG con do duoc be tong hop le, do BINARY SEARCH
         // lui dan ve phia "otherEdge" (dau con lai, gia dinh luon on dinh) de tim ranh gioi THAT
         // giua vung tiet dien on dinh va vung bi vat/thu hep phi tuyen, roi lui them 1 khoang an
         // toan (20mm) sau vao vung on dinh. Neu nominalEdge van do duoc binh thuong (truong hop
@@ -323,7 +368,11 @@ namespace TEDI_Ham_chui_model.ExternalCommands
             double tightHookLenMm = barDiamMm + tieDiamMm + 2.0; // vua du om quanh thep doc + thep dai
             double maxBendDiameterMm = tightHookLenMm - 5.0; // chua lai 5mm doan thang an toan
 
-            string newTypeName = $"{tieBarType.Name}_C_Tie_Tight";
+            // Ten Type gom CA barDiamMm (khong chi tieBarType.Name) vi ban kinh bo goc phu
+            // thuoc CA HAI duong kinh - neu chi dat theo tieBarType.Name, 2 nhom co CUNG
+            // duong kinh dai nhung KHAC duong kinh thep doc (vd S6/H3 cung D8 nhung S4/H2
+            // khac D) se bi trung ten va lay nham ban kinh bo goc cua nhau.
+            string newTypeName = $"{tieBarType.Name}_C_Tie_Tight_L{barDiamMm:F0}";
             var existing = new FilteredElementCollector(doc)
                 .OfClass(typeof(RebarBarType))
                 .Cast<RebarBarType>()
@@ -365,7 +414,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
         //     om vong QUA CA 2 BEN thanh, khong con doan nao chay xuyen qua tam.
         //   - A/E (moc gap vao)  : tu mep tiep tuyen doi dien, be tiep VE PHIA thanh
         //     thep doc (doc truc SAU) 1 doan dung bang 10 lan duong kinh thep dai
-        //     (10*DefaultCTieDiamMm) de mocneo chac, KHONG con vuot qua tam thanh.
+        //     (10*duong kinh dai C) de mocneo chac, KHONG con vuot qua tam thanh.
         // rCenterFt dung dung StirrupTieBendDiameter cua tieBarType (ban kinh bo goc
         // THAT Revit se ve) + ban kinh thep dai, thay vi ban kinh thep doc truoc day,
         // de diem dat va cung bo goc luon khop nhau (khong con lech gay dai chong
@@ -385,13 +434,13 @@ namespace TEDI_Ham_chui_model.ExternalCommands
 
         public static List<TieRecord> CreateOuterInnerTies(
             Document doc, PreparedHost h, FaceDef fd, double crossPos,
-            double lLo, double lHi, RebarBarType tieBarType, double barDiamMm, double tieSpacingFt,
+            double lLo, double lHi, RebarBarType tieBarType, double barDiamMm, double tieDiamMm, double tieSpacingFt,
             List<string> report, double lOffsetFt = 0.0)
         {
             var madeTies = new List<TieRecord>();
             try
             {
-                double tieDiamFt = RebarCommon.MmToFt(DefaultCTieDiamMm);
+                double tieDiamFt = RebarCommon.MmToFt(tieDiamMm);
                 double tieRadiusFt = tieDiamFt / 2.0;
 
                 double rInnerFt = tieBarType.StirrupTieBendDiameter / 2.0;
@@ -406,7 +455,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                 double crossFar = crossPos - crossHalfSpanFt;    // phia doi dien, noi be moc A/E
 
                 // Moc A/E: dung 10 lan duong kinh thep dai theo yeu cau.
-                double hookFootFt = RebarCommon.MmToFt(10.0 * DefaultCTieDiamMm);
+                double hookFootFt = RebarCommon.MmToFt(10.0 * tieDiamMm);
 
                 // QUAN TRONG: FaceDef.OuterPos/InnerPos KHONG co dinh chieu - voi mat "Day"/
                 // "Trai" thi OuterPos < InnerPos, nhung voi mat "Nap"/"Phai" (xem
@@ -428,7 +477,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
                 // bien - phan du con lai o dau xa bi BO TRONG, khong tao them dai nao (dung yeu
                 // cau: khoang cach phai dung 600mm nhu dau vao, khong duoc phep co 1 doan le hut
                 // ngan hon). lOffsetFt dung cho LUOT 2 (dai C tu safeCrossMax) trong
-                // RebarStirrupCCommand.Execute() - lech nua buoc (tieSpacingFt/2) so voi diem dau
+                // RebarStirrupCLogic.Execute() - lech nua buoc (tieSpacingFt/2) so voi diem dau
                 // tien cua luot 1, de dai luot 2 xen ke giua cac dai luot 1 doc theo Lv.
                 var lPositions = new List<double>();
                 for (double lp = lLo + lOffsetFt; lp <= lHi; lp += tieSpacingFt)
