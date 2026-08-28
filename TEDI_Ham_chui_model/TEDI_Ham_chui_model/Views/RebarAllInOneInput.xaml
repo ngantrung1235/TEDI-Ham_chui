@@ -43,10 +43,10 @@
             <StackPanel>
 
                 <!-- S1/F1/H1 -->
-                <GroupBox Header="Thép ngang lớp Trong (S1 / F1 / H1)" Margin="0,0,0,10">
+                <GroupBox Header="Thép S1, F1, H1" Margin="0,0,0,10">
                     <Grid Margin="4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
@@ -60,25 +60,25 @@
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="D (mm)" Style="{StaticResource ColHeader}"/>
                         <TextBlock Grid.Row="0" Grid.Column="2" Text="Khoảng cách (mm)" Style="{StaticResource ColHeader}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S1 (Nắp)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S1" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DiamS1Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding SpaceS1Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F1 (Đáy)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F1" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DiamF1Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding SpaceF1Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="H1 (Trái+Phải)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="H1" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DiamH1Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding SpaceH1Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
                     </Grid>
                 </GroupBox>
 
                 <!-- S2/F2 -->
-                <GroupBox Header="Thép hình Z - Rebar_21 (S2 / F2)" Margin="0,0,0,10">
+                <GroupBox Header="Thép S2, F2 (Rebar_21)" Margin="0,0,0,10">
                     <Grid Margin="4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
@@ -93,27 +93,27 @@
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="D (mm)" Style="{StaticResource ColHeader}"/>
                         <TextBlock Grid.Row="0" Grid.Column="2" Text="Khoảng cách (mm)" Style="{StaticResource ColHeader}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S2 (Nắp)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S2" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DiamS2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding SpaceS2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F2 (Đáy)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F2" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DiamF2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding SpaceF2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Cạnh dài (mm)" Style="{StaticResource RowLabel}" ToolTip="Hằng số hiệu chỉnh vị trí mũi chân B (chân dài) của RebarShape Rebar_21 - đo thực nghiệm, chỉ đúng với B=3500mm + D20"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Cạnh dài (mm)" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ShapeUTipMm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Cạnh ngắn (mm)" Style="{StaticResource RowLabel}" ToolTip="Hằng số bù hụt vị trí mũi chân A (chân ngắn) của RebarShape Rebar_21 - đo thực nghiệm, chỉ đúng với C~5892mm + D20"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Cạnh ngắn (mm)" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ShapeCEndCompensationMm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                     </Grid>
                 </GroupBox>
 
                 <!-- S4/F4/H2 -->
-                <GroupBox Header="Thép dọc (S4 / F4 / H2)" Margin="0,0,0,10">
+                <GroupBox Header="Thép S4, F4, H2" Margin="0,0,0,10">
                     <Grid Margin="4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
@@ -127,25 +127,25 @@
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="D (mm)" Style="{StaticResource ColHeader}"/>
                         <TextBlock Grid.Row="0" Grid.Column="2" Text="Khoảng cách (mm)" Style="{StaticResource ColHeader}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S4 (Nắp)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S4" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DiamS4Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding SpaceS4Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F4 (Đáy)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F4" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DiamF4Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding SpaceF4Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="H2 (Trái+Phải)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="H2" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DiamH2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding SpaceH2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
                     </Grid>
                 </GroupBox>
 
                 <!-- S6/F6/H3 -->
-                <GroupBox Header="Đai C (S6 / F6 / H3)" Margin="0,0,0,10">
+                <GroupBox Header="Thép S6, F6, H3" Margin="0,0,0,10">
                     <Grid Margin="4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
@@ -159,29 +159,30 @@
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="D (mm)" Style="{StaticResource ColHeader}"/>
                         <TextBlock Grid.Row="0" Grid.Column="2" Text="Khoảng cách (mm)" Style="{StaticResource ColHeader}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S6 (Nắp)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="S6" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DiamS6Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding SpaceS6Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F6 (Đáy)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="F6" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DiamF6Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding SpaceF6Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="H3 (Trái+Phải)" Style="{StaticResource RowLabel}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="H3" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DiamH3Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding SpaceH3Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
                     </Grid>
                 </GroupBox>
 
                 <!-- S5 -->
-                <GroupBox Header="Thép chéo góc vát (S5)" Margin="0,0,0,10">
+                <GroupBox Header="Thép S5" Margin="0,0,0,10">
                     <Grid Margin="4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
@@ -192,6 +193,9 @@
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="S5" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DiamS5Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding SpaceS5Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Vươn (mm)" Style="{StaticResource RowLabel}"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding VuonMm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                     </Grid>
                 </GroupBox>
 

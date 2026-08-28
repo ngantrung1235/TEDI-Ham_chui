@@ -15,9 +15,15 @@ namespace TEDI_Ham_chui_model.Models
         // coverMm PHAI la CUNG gia tri (CoverMm + duong kinh Rebar_21) da dung de
         // PrepareHosts() cho lenh nay - xem RebarAllInOneViewModel.Run(). Nguoi goi LUON
         // truyen du tham so, khong con gia tri mac dinh.
+        // diamS2Mm: duong kinh thep Rebar_21 mat Nap ("S2") - dung de offset vi tri bat
+        // dau doc Lv cua S5 mot khoang bang chinh duong kinh nay (xem ghi chu trong
+        // ChamferCornerReinforcement.CreateChamferCornerBars), tuong tu co che "luot 2"
+        // cua dai C trong RebarStirrupCLogic.cs, de S5 khong rai trung vi tri L voi
+        // Rebar_21.
         public static string RunOnPrepared(
             Document doc, List<PreparedHost> prepared, List<string> report,
-            double diamS5Mm, double spaceS5Mm, double coverMm)
+            double diamS5Mm, double spaceS5Mm, double coverMm,
+            double extendMm, double diamS2Mm)
         {
             double coverFt = RebarCommon.MmToFt(coverMm);
             double chamferSpaceFt = RebarCommon.MmToFt(spaceS5Mm);
@@ -38,6 +44,7 @@ namespace TEDI_Ham_chui_model.Models
                         h.WOff, h.ZOff,
                         chamferFt, coverFt,
                         h.LMinRaw, h.LMaxRaw, chamferSpaceFt,
+                        extendMm, diamS2Mm,
                         report, h.Id, ref totalCount);
                 }
 
