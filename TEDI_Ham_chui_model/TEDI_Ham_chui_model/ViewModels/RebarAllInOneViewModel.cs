@@ -56,6 +56,13 @@ namespace TEDI_Ham_chui_model.ViewModels
         public double DiamF2Mm { get; set; } = 20.0;
         public double SpaceF2Mm { get; set; } = 250.0;
 
+        // 2 hang so hieu chinh hinh hoc cua RebarShape "Rebar_21" (xem ghi chu trong
+        // Models/RebarOuterShapeLogic.cs, class ShapeDrivenOuterRebar) - do dac THUC
+        // NGHIEM rieng cho B=3500mm + thanh D20; neu doi B hoac duong kinh S2/F2, nguoi
+        // dung can tu do dac lai va nhap so moi vao day.
+        public double ShapeUTipMm { get; set; } = 990.0;
+        public double ShapeCEndCompensationMm { get; set; } = 27.5;
+
         // S4 (Nap) / F4 (Day) / H2 (Trai+Phai) - thep doc.
         public double DiamS4Mm { get; set; } = 14.0;
         public double SpaceS4Mm { get; set; } = 150.0;
@@ -137,7 +144,7 @@ namespace TEDI_Ham_chui_model.ViewModels
             var outerReport = new List<string>();
             summaries.Add(RebarOuterShapeLogic.RunOnPrepared(
                 doc, RebarCommon.PrepareHosts(geometries, outerCoverFt), outerReport,
-                DiamS2Mm, SpaceS2Mm, DiamF2Mm, SpaceF2Mm));
+                DiamS2Mm, SpaceS2Mm, DiamF2Mm, SpaceF2Mm, ShapeUTipMm, ShapeCEndCompensationMm));
 
             var innerReport = new List<string>();
             summaries.Add(RebarInnerSingleLogic.RunOnPrepared(

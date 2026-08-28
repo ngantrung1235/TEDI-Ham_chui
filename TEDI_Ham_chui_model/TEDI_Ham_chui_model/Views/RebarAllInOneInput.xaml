@@ -86,6 +86,8 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="D (mm)" Style="{StaticResource ColHeader}"/>
@@ -98,6 +100,12 @@
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="F2 (Đáy)" Style="{StaticResource RowLabel}"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DiamF2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                         <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding SpaceF2Mm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Cạnh dài (mm)" Style="{StaticResource RowLabel}" ToolTip="Hằng số hiệu chỉnh vị trí mũi chân B (chân dài) của RebarShape Rebar_21 - đo thực nghiệm, chỉ đúng với B=3500mm + D20"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ShapeUTipMm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Cạnh ngắn (mm)" Style="{StaticResource RowLabel}" ToolTip="Hằng số bù hụt vị trí mũi chân A (chân ngắn) của RebarShape Rebar_21 - đo thực nghiệm, chỉ đúng với C~5892mm + D20"/>
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ShapeCEndCompensationMm, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource RowInput}" Margin="0,3,6,3"/>
                     </Grid>
                 </GroupBox>
 

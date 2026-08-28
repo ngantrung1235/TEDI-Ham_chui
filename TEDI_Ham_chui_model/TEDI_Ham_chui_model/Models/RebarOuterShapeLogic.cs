@@ -20,11 +20,15 @@ namespace TEDI_Ham_chui_model.Models
         // diamS2Mm/spaceS2Mm = thanh Rebar_21 tai mat Nap ("S2" theo ban ve), diamF2Mm/
         // spaceF2Mm = tai mat Day ("F2"). Moi mat co RebarBarType RIENG (ten dat theo
         // duong kinh thuc, vd "D25") de tranh nham lan neu 2 mat dung duong kinh khac
-        // nhau. Nguoi goi (RebarAllInOneViewModel) LUON truyen du ca 4 gia tri nay.
+        // nhau. shapeUTipMm/shapeCEndCompensationMm = 2 hang so hieu chinh hinh hoc cua
+        // RebarShape "Rebar_21" (xem ghi chu trong ShapeDrivenOuterRebar ben duoi) -
+        // nguoi dung tu do dac/nhap lai neu doi B/duong kinh thanh. Nguoi goi
+        // (RebarAllInOneViewModel) LUON truyen du cac gia tri nay.
         public static string RunOnPrepared(
             Document doc, List<PreparedHost> prepared, List<string> report,
             double diamS2Mm, double spaceS2Mm,
-            double diamF2Mm, double spaceF2Mm)
+            double diamF2Mm, double spaceF2Mm,
+            double shapeUTipMm, double shapeCEndCompensationMm)
         {
             double coverFt = RebarCommon.MmToFt(RebarCommon.DefaultCoverMm);
 
@@ -79,7 +83,8 @@ namespace TEDI_Ham_chui_model.Models
                             int made = ShapeDrivenOuterRebar.CreateShapeDrivenBars(
                                 doc, rebarShape0, barType, h.Inst, h.Solid,
                                 h.L2G, h.Wv, h.Zv, h.WOff, fd.OuterPos, otherOuterZ, isNap, bLegAtW0Side,
-                                coverFt, lStartExtraFt, h.LMinRaw, h.LMaxRaw, spaceFt, heightN_ft, bLegDefaultMm, report, h.Id);
+                                coverFt, lStartExtraFt, h.LMinRaw, h.LMaxRaw, spaceFt, heightN_ft, bLegDefaultMm,
+                                shapeUTipMm, shapeCEndCompensationMm, report, h.Id);
                             instCount += made;
                         }
                         report.Add($"{h.Id}: đã tạo {instCount} thanh Rebar_21 (Nắp+Đáy).");
@@ -102,32 +107,19 @@ namespace TEDI_Ham_chui_model.Models
     // thep ngoai cua tuong qua goc.
     //
     // *** CAC HANG SO HIEU CHINH HINH HOC (CALIBRATION) ***
-    // SHAPE_U_TIP_MM / SHAPE_V_TIP_MM la toa do LOCAL (trong mat phang rieng cua
-    // RebarShape "Rebar_21", he truc (xVec,yVec) tu chon khi goi CreateFromRebarShape)
-    // cua diem MUI CHAN B (dau neo sau nhat, xa doan C nhat). Da do dac THUC
-    // NGHIEM bang cach tao thu 1 thanh trong Revit that (B=3500mm), doi chieu
-    // toa do voi 2 thanh mau nguoi dung da dat tay san trong model du an
-    // (elementId 415621 - mau mat Nap, 416154 - mau mat Day) - KHOP TUYET DOI
-    // (sai lech 0mm) o ca 2 cach dat. Cac hang so nay CHI dung duoc khi:
-    //   - B (chan dai) = 3500mm dung nhu hien tai
-    //   - Thanh thep dung loai D20 (anh huong ban kinh uon)
-    //   - Van dung dung RebarShape "Rebar_21" (khong doi shape khac)
+    // shapeUTipMm la toa do LOCAL (trong mat phang rieng cua RebarShape "Rebar_21", he
+    // truc (xVec,yVec) tu chon khi goi CreateFromRebarShape) cua diem MUI CHAN B (dau
+    // neo sau nhat, xa doan C nhat). Do dac THUC NGHIEM bang cach tao thu 1 thanh trong
+    // Revit that (B=3500mm), doi chieu toa do voi 2 thanh mau nguoi dung da dat tay san
+    // trong model du an (elementId 415621 - mau mat Nap, 416154 - mau mat Day) - KHOP
+    // TUYET DOI (sai lech 0mm) o ca 2 cach dat, VOI B=3500mm + thanh D20. shapeCEndCompensationMm
+    // la do hut chieu dai doan C (bend deduction) tai dau chan A - do dac THUC NGHIEM
+    // tuong tu, voi C~5892mm + D20 thi do hut ~27.5mm. Neu doi B/duong kinh thanh/shape
+    // khac, 2 gia tri nay co the KHONG con dung nua - vi vay giao cho nguoi dung tu nhap
+    // lai qua UI (xem RebarAllInOneViewModel) thay vi hard-code.
     // ============================================================================
     public static class ShapeDrivenOuterRebar
     {
-        private const double SHAPE_U_TIP_MM = 990.0;
-        private const double SHAPE_V_TIP_MM = -2650.0;
-
-        // Bu tru do hut chieu dai doan C (bend deduction) tai dau chan A (dau
-        // KHONG duoc "ghim" truc tiep boi origin/qTip, ma do family tu ve ra
-        // tu tham so C). Do dac thuc nghiem: voi C~5892mm, D20, dau A luon hut
-        // vao trong ~27.5mm so voi vi tri wLoSafe/wHiSafe muc tieu, GIONG NHAU
-        // o ca 2 chieu dat (Nap va Day, xVec doi dau nhau) - vi day la do hut
-        // do bend cua chinh chan A (dai A=1900mm) nen khong phu thuoc C hay
-        // chieu xVec. Cong them vao tham so "C" TRUOC KHI set (khong dung de
-        // tinh xVec/origin) de dau A khop dung wLoSafe/wHiSafe.
-        private const double SHAPE_C_END_COMPENSATION_MM = 27.5;
-
         private static double MmToFt(double mm) => UnitUtils.ConvertToInternalUnits(mm, UnitTypeId.Millimeters);
         private static double FtToMm(double ft) => UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Millimeters);
 
@@ -195,7 +187,8 @@ namespace TEDI_Ham_chui_model.Models
             Func<double, double, double, XYZ> L2G, XYZ Wv, XYZ Zv,
             List<double> wOff, double faceOuterZ, double otherFaceOuterZ, bool isNap, bool bLegAtW0Side,
             double coverFt, double lStartExtraFt, double lMinRaw, double lMaxRaw, double spaceFt,
-            double heightN_ft, double bLegDefaultMm, List<string> report, ElementId hostId)
+            double heightN_ft, double bLegDefaultMm, double shapeUTipMm, double shapeCEndCompensationMm,
+            List<string> report, ElementId hostId)
         {
             double diamMm = FtToMm(barType.BarModelDiameter);
             double heightN_mm = FtToMm(heightN_ft);
@@ -270,7 +263,7 @@ namespace TEDI_Ham_chui_model.Models
                 XYZ qTip = L2G(lRow, wB_pos, tipZft);
                 // Gốc toạ độ (origin) của family Rebar thực chất nằm ở mũi chân thép (V=0),
                 // còn cạnh ngang C nằm ở toạ độ V = B. Do đó không cộng/trừ SHAPE_V_TIP_MM nữa!
-                XYZ origin = qTip - MmToFt(SHAPE_U_TIP_MM) * xVec;
+                XYZ origin = qTip - MmToFt(shapeUTipMm) * xVec;
 
                 Rebar rebar;
                 try
@@ -286,7 +279,7 @@ namespace TEDI_Ham_chui_model.Models
 
                 rebar.LookupParameter("A")?.Set(MmToFt(A_mm));
                 rebar.LookupParameter("B")?.Set(MmToFt(B_mm));
-                rebar.LookupParameter("C")?.Set(C_ft + MmToFt(SHAPE_C_END_COMPENSATION_MM));
+                rebar.LookupParameter("C")?.Set(C_ft + MmToFt(shapeCEndCompensationMm));
 
                 made++;
             }
