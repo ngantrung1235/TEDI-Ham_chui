@@ -79,9 +79,15 @@ namespace TEDI_Ham_chui_model.ViewModels
         public double DiamH3Mm { get; set; } = 12.0;
         public double SpaceH3Mm { get; set; } = 600.0;
 
-        // S5 - thep cheo goc vat.
+        // S5 - thep cheo goc vat. 2 chan gap khuc noi tiep doan cheo B (xem
+        // ChamferCornerReinforcement.CreateChamferCornerBars), CUNG dung 1 gia tri
+        // "vuon" (VuonMm) duy nhat cho ca 2 chan: chan doc -Zv chay xuong doc TUONG
+        // (song song chan dai cua Rebar_21 tren tuong) va chan doc Wv chay ve tim ham
+        // doc NAP (song song doan ngang cua Rebar_21 tren nap). Mac dinh 240mm - van
+        // la gia tri tam thoi de test, CHUA phai chieu dai neo/lap thiet ke chinh thuc.
         public double DiamS5Mm { get; set; } = 15.0;
         public double SpaceS5Mm { get; set; } = 250.0;
+        public double VuonMm { get; set; } = 240.0;
 
         public ICommand OkCommand { get; }
         public ICommand CancelCommand { get; }
@@ -154,7 +160,7 @@ namespace TEDI_Ham_chui_model.ViewModels
             var chamferReport = new List<string>();
             summaries.Add(RebarChamferLogic.RunOnPrepared(
                 doc, RebarCommon.PrepareHosts(geometries, longitudinalCoverFt), chamferReport,
-                DiamS5Mm, SpaceS5Mm, longitudinalCoverMm));
+                DiamS5Mm, SpaceS5Mm, longitudinalCoverMm, VuonMm, DiamS2Mm));
 
             return string.Join("\n\n", summaries);
         }
