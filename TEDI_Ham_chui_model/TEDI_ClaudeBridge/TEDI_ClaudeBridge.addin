@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>TEDI Claude Bridge</Name>
+    <Assembly>TEDI_ClaudeBridge\TEDI_ClaudeBridge.dll</Assembly>
+    <AddInId>6C1E8F0A-3B7D-4E52-9A41-2F8D5B0C7E19</AddInId>
+    <FullClassName>TEDI_ClaudeBridge.App</FullClassName>
+    <VendorId>THINHTQ</VendorId>
+    <VendorDescription>278 Ton Duc Thang</VendorDescription>
+  </AddIn>
+</RevitAddIns>
