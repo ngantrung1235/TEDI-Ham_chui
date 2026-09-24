@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "plaxis3d": {
+      "command": "D:\\Tools\\PLAXIS3D_MCP\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "plaxis3d_mcp"],
+      "env": {
+        "PLAXIS_HOST": "localhost",
+        "PLAXIS_INPUT_PORT": "10000",
+        "PLAXIS_PASSWORD": "${PLAXIS_PASSWORD}"
+      }
+    }
+  }
+}
