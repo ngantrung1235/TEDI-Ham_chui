@@ -11,6 +11,19 @@ class FakeProp:
         self.value = value
 
 
+class FakeStaged(dict):
+    """Staged property: prop[phase] = value."""
+
+    def __setitem__(self, phase, value):
+        super().__setitem__(phase.Name.value, value)
+
+
+class FakeWaterConditions:
+    def __init__(self):
+        self.Conditions = FakeStaged()
+        self.h = FakeStaged()
+
+
 class FakeObj:
     def __init__(self, g, plx_type, name):
         self.__dict__.update(_g=g, _plx_type=plx_type, _props={"Name": name}, calls=[])
@@ -19,7 +32,8 @@ class FakeObj:
     def __getattr__(self, key):
         props = self.__dict__["_props"]
         if key in props:
-            return FakeProp(props[key])
+            v = props[key]
+            return v if isinstance(v, (FakeWaterConditions, FakeObj)) else FakeProp(v)
         raise AttributeError(key)
 
     def __setattr__(self, key, value):
@@ -77,6 +91,13 @@ class FakeGlobal:
     def gotostructures(self): self.log.append("gotostructures")
     def gotomesh(self): self.log.append("gotomesh")
     def gotostages(self): self.log.append("gotostages")
+    def gotoflow(self): self.log.append("gotoflow")
+
+    def waterlevel(self, *pts):
+        return self._new("UserWaterLevel")
+
+    def importgeometry(self, path):
+        return [self._new("Surface"), self._new("Surface")]
 
     # soil
     def borehole(self, x, y):
@@ -115,6 +136,7 @@ class FakeGlobal:
 
     def extrude(self, srf, vec):
         soil = self._new("Soil"); soil._props["extrusion"] = vec; self.Soils.append(soil)
+        soil._props["WaterConditions"] = FakeWaterConditions()
         return [self._new("Volume"), soil]
 
     def surfload(self, *pts):
@@ -161,3 +183,44 @@ def factory():
         return FakeServer(g), g
 
     return g, make
+
+
+# -- Output --------------------------------------------------------------------------------
+class NS:
+    def __init__(self, path):
+        self._path = path
+
+    def __getattr__(self, key):
+        if key.startswith("_"):
+            raise AttributeError(key)
+        return NS(f"{self._path}.{key}" if self._path else key)
+
+
+class FakeOutput:
+    """Plate nodes on a 3 x 3 grid; M11 = 10*x per phase index (+ phase * 5)."""
+
+    def __init__(self, phases=("InitialPhase", "Phase_1", "Phase_2")):
+        self.Phases = [FakeObj(self, "Phase", n) for n in phases]
+        for i, ph in enumerate(self.Phases):
+            ph._props["Identification"] = f"stage {i}"
+            ph._props["index"] = i
+        self.Plates = [FakeObj(self, "Plate", "Plate_1_1")]
+        self.Plate_1_1 = self.Plates[0]
+        self.ResultTypes = NS("")
+        self.Plots = [FakeObj(self, "Plot", "Plot_1")]
+        self.rejected = set()
+        self.nodes = [(x, y, 0.0) for x in (0.0, 1.0, 2.0) for y in (0.0, 1.0, 2.0)]
+
+    def getresults(self, *args):
+        obj, phase, rtype, loc = args if len(args) == 4 else (None, *args)
+        i = phase._props["index"]
+        q = rtype._path.split(".")[-1]
+        if q in "XYZ":
+            return [n["XYZ".index(q)] for n in self.nodes]
+        base = {"M11": 10.0, "M22": 5.0, "N1": -20.0, "N2": -10.0, "Q13": 8.0, "Q23": 4.0}.get(q, 1.0)
+        return [base * (1 + x) + 5.0 * i for x, y, z in self.nodes]
+
+    def getsingleresult(self, phase, rtype, point):
+        if point[0] > 10:
+            return "not found"
+        return -0.01 * (phase._props["index"] + 1) * (1 + point[0])

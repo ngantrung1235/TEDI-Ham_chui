@@ -10,14 +10,16 @@ from typing import Any, Callable
 import anyio
 
 try:  # mcp >= 2
+    from mcp.server.mcpserver import Image
     from mcp.server.mcpserver import MCPServer as _Server
     from mcp.server.mcpserver.exceptions import ToolError
 except ImportError:  # mcp 1.x
     from mcp.server.fastmcp import FastMCP as _Server
+    from mcp.server.fastmcp import Image
     from mcp.server.fastmcp.exceptions import ToolError
 
-from .engineering import culvert, presets, traffic
-from .ops import geometry, materials, project, results, staging
+from .engineering import culvert, design, presets, traffic, tunnel
+from .ops import design_check, export, geometry, importers, materials, project, results, staging, water
 from .session import PlaxisSession
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
@@ -33,6 +35,10 @@ use build_box_culvert, which does all of this parametrically.
 Object names are PLAXIS names ('Plate_1', 'Phase_2', 'PlateMat_1'); in property values
 a string starting with '@' refers to an object (e.g. {"Material": "@PlateMat_1"}).
 When a dedicated tool is missing, use plaxis_command with PLAXIS command-line syntax.
+Tunnels: build_tunnel (step-by-step excavation). Imports: import_geometry, import_dxf,
+import_boreholes. Water: water_* tools. Exports: results_export, results_along_line,
+results_history, plot_image (returns a picture you can look at). Design: design_check_plates
+(TCVN 11823 Strength I / Service I on plate forces), rc_section_check.
 Every tool returns 'warnings' for properties PLAXIS rejected - read them.
 """
 
@@ -392,16 +398,205 @@ async def build_box_culvert(params: dict[str, Any] | None = None) -> dict:
     return await _call(culvert.build_box_culvert, p)
 
 
-def _culvert_params(params: dict[str, Any] | None) -> culvert.BoxCulvertParams:
+# ---------------------------------------------------------------------------------------
+# Tunnels
+# ---------------------------------------------------------------------------------------
+@mcp.tool()
+async def build_tunnel(params: dict[str, Any] | None = None) -> dict:
+    """Circular tunnel with step-by-step excavation in the CURRENT project (soil must exist):
+    per round a core soil volume, lining plates and optional face pressure; phases
+    K0 -> round 1..N (excavate, dry core, face pressure, lining installed unsupported_rounds
+    behind the face) -> lining closure. params: center_x, center_z, y_start, radius, rounds,
+    round_length, n_facets, lining_grade, lining_thickness, lining_material, core_material,
+    unsupported_rounds, face_pressure, interfaces, dry_core, auto_stage, generate_mesh,
+    mesh_coarseness. Axis along +Y."""
+    p = await _pure(_dataclass_params, tunnel.TunnelParams, params)
+    return await _call(tunnel.build_tunnel, p)
+
+
+# ---------------------------------------------------------------------------------------
+# Import (Civil 3D / Revit / Excel)
+# ---------------------------------------------------------------------------------------
+@mcp.tool()
+async def import_geometry(path: str) -> dict:
+    """Import a geometry file with PLAXIS' own importer (DXF/DWG/IFC/STEP/3DS, version dependent)."""
+    return await _call(importers.import_geometry_native, path)
+
+
+@mcp.tool()
+async def import_dxf(
+    path: str,
+    create: str = "surface",
+    layers: list[str] | None = None,
+    material: str | None = None,
+    scale: float = 1.0,
+    offset: list[float] | None = None,
+    extrusion: list[float] | None = None,
+    max_faces: int = 2000,
+) -> dict:
+    """Read 3DFACE / closed polylines / meshes from a DXF (Civil 3D, Revit export) and create
+    surfaces, plates or extruded soil volumes. offset = [x0, y0, z0] subtracted before scaling
+    (e.g. VN-2000 coordinates -> local origin); scale = 0.001 for mm drawings. Needs ezdxf."""
+    return await _call(importers.import_dxf, path, create, layers, material, scale, offset, extrusion, max_faces)
+
+
+@mcp.tool()
+async def import_boreholes(path: str, create_missing_materials: bool = False) -> dict:
+    """Boreholes from CSV/XLSX, one row per layer top->bottom with columns
+    borehole, x, y, top, bottom, material[, head]. All boreholes need the same layer sequence
+    (zero thickness allowed). Materials are referenced by their Identification."""
+    return await _call(importers.import_boreholes, path, create_missing_materials)
+
+
+# ---------------------------------------------------------------------------------------
+# Groundwater
+# ---------------------------------------------------------------------------------------
+@mcp.tool()
+async def water_borehole_head(borehole: str, head: float) -> dict:
+    """Set the groundwater head of a borehole (m)."""
+    return await _call(water.set_borehole_head, borehole, head)
+
+
+@mcp.tool()
+async def water_level_create(points: list[list[float]]) -> dict:
+    """Create a user water level through >= 3 points (e.g. lowered level in an excavation)."""
+    return await _call(water.create_water_level, points)
+
+
+@mcp.tool()
+async def water_phase_settings(
+    phase: str, pore_pressure: str | None = None, global_water_level: str | None = None
+) -> dict:
+    """Phase pore pressure: phreatic | steady | previous, and the global water level name."""
+    return await _call(water.set_phase_water, phase, pore_pressure, global_water_level)
+
+
+@mcp.tool()
+async def water_soil_condition(soils: list[str], phase: str, condition: str = "Dry", head: float | None = None) -> dict:
+    """Water condition of soil volumes/clusters in a phase: Dry | Head (with head) |
+    Interpolate | Global level | Cluster phreatic level | User-defined."""
+    return await _call(water.set_soil_water_condition, soils, phase, condition, head)
+
+
+# ---------------------------------------------------------------------------------------
+# Exports and images
+# ---------------------------------------------------------------------------------------
+@mcp.tool()
+async def results_export(
+    result_types: list[str], path: str, phase: str | None = None, object_name: str | None = None,
+    location: str = "node",
+) -> dict:
+    """Write X, Y, Z + result columns of one group to .csv or .xlsx (e.g. ['Soil.Ux','Soil.Uz'])."""
+    return await _call(export.export_results, result_types, path, phase, object_name, location)
+
+
+@mcp.tool()
+async def results_along_line(
+    p1: list[float], p2: list[float], result_types: list[str], n_points: int = 51,
+    phase: str | None = None, path: str | None = None,
+) -> dict:
+    """Sample results along a line (settlement trough, profile under a slab), optional CSV/XLSX."""
+    return await _call(export.results_along_line, p1, p2, result_types, n_points, phase, path)
+
+
+@mcp.tool()
+async def results_history(
+    point: list[float], result_types: list[str], phases: list[str] | None = None, path: str | None = None
+) -> dict:
+    """Values at one point through all phases (settlement vs construction stage)."""
+    return await _call(export.results_history, point, result_types, phases, path)
+
+
+@mcp.tool()
+async def plot_image(
+    path: str, result_type: str | None = None, phase: str | None = None, width: int = 1600, height: int = 1000
+) -> list:
+    """Export the current Output plot as PNG (optionally set result type / phase first) and
+    return the image so it can be inspected."""
+    info, data = await _call(export.export_plot_image, path, result_type, phase, width, height)
+    return [Image(data=data, format="png"), info] if data else [info]
+
+
+# ---------------------------------------------------------------------------------------
+# Design checks (TCVN 11823)
+# ---------------------------------------------------------------------------------------
+@mcp.tool()
+async def design_check_plates(
+    permanent_phase: str,
+    sections: dict[str, dict[str, Any]],
+    live_phase: str | None = None,
+    gamma_p_max: float = 1.35,
+    gamma_p_min: float = 0.90,
+    gamma_ll: float = 1.75,
+    eta: float = 1.0,
+    fill_depth: float | None = None,
+    path: str | None = None,
+) -> dict:
+    """TCVN 11823-3 Strength I / Service I combination of plate forces (factoring of effects:
+    permanent phase x gamma_p + (live - permanent) x gamma_LL) and TCVN 11823-5 checks of
+    flexure+axial (strain compatibility), shear (culvert-slab clause for fill >= 0.6 m) and crack
+    control, both plate directions. sections: {"Plate_1_1": {"h": 500, "as_pos": 1340,
+    "as_neg": 1005, "cover": 60, "fc": 30, "fy": 400, "spacing": 150, "member": "top_slab",
+    "dir2": {"as_pos": 560, "as_neg": 560}}, "*": {...default for other plates}}. mm, MPa."""
+    return await _call(
+        design_check.design_check_plates, permanent_phase, sections, live_phase, gamma_p_max, gamma_p_min,
+        gamma_ll, eta, fill_depth, path,
+    )
+
+
+@mcp.tool()
+async def rc_section_check(
+    section: dict[str, Any], Mu: float, Pu: float = 0.0, Vu: float = 0.0, Ms: float | None = None,
+    member: str = "wall", fill_depth: float | None = None,
+) -> dict:
+    """Check one 1 m wide RC section (TCVN 11823-5): Mu kNm/m, Pu kN/m (compression +), Vu kN/m,
+    Ms service moment. section: h, as_pos, as_neg, cover, fc, fy, spacing, gamma_e (mm, MPa)."""
+    return await _pure(
+        lambda: design.check_point(design.Section(**section), Mu, Pu, Vu, Mu if Ms is None else Ms, member, fill_depth)
+    )
+
+
+@mcp.tool()
+async def load_factors() -> dict:
+    """Load factors of TCVN 11823-3:2017 Tables 3.4.1-1/-2 used by the design tools."""
+    return {k: {"max": v[0], "min": v[1]} for k, v in design.LOAD_FACTORS.items()}
+
+
+def _dataclass_params(cls: type, params: dict[str, Any] | None) -> Any:
     params = dict(params or {})
-    known = {f.name for f in fields(culvert.BoxCulvertParams)}
+    known = {f.name for f in fields(cls)}
     unknown = set(params) - known
     if unknown:
-        raise RuntimeError(f"Unknown culvert parameters {sorted(unknown)}; valid: {sorted(known)}")
-    return culvert.BoxCulvertParams(**params)
+        raise RuntimeError(f"Unknown parameters {sorted(unknown)}; valid: {sorted(known)}")
+    return cls(**params)
+
+
+def _culvert_params(params: dict[str, Any] | None) -> culvert.BoxCulvertParams:
+    return _dataclass_params(culvert.BoxCulvertParams, params)
+
+
+def check() -> int:
+    """`python -m plaxis3d_mcp --check`: test the PLAXIS connection from a terminal."""
+    try:
+        info = SESSION.connect_input()
+    except Exception as exc:
+        print(f"[FAIL] {exc}")
+        return 1
+    print("[OK] Connected to PLAXIS:", {k: v for k, v in info.items() if v is not None})
+    return 0
 
 
 def main() -> None:
+    if "--check" in sys.argv:
+        raise SystemExit(check())
+    if "--list-tools" in sys.argv:
+
+        async def _names():
+            return sorted(t.name for t in await mcp.list_tools())
+
+        for name in anyio.run(_names):
+            print(name)
+        return
     mcp.run()
 
 

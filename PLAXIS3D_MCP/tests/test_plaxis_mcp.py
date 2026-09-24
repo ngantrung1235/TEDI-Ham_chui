@@ -92,6 +92,8 @@ def test_borehole_levels(sess):
     assert ("level", 2, -12.0) in sess.fake.log
     with pytest.raises(RuntimeError):
         geometry.create_borehole(sess, 0, 0, [0, 5])
+    with pytest.raises(RuntimeError):
+        geometry.create_borehole(sess, 0, 0, [0, 0])
 
 
 def test_plate_and_staged_toggle(sess):
@@ -180,5 +182,5 @@ def test_build_box_culvert_through_mcp(monkeypatch):
     async def bad():
         return await server.mcp.call_tool("build_box_culvert", {"params": {"span": 6}})
 
-    with pytest.raises(Exception, match="Unknown culvert parameters"):
+    with pytest.raises(Exception, match="Unknown parameters"):
         asyncio.run(bad())

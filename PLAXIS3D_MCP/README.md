@@ -5,8 +5,13 @@ MCP server (Model Context Protocol) cho phép **Claude Code** hoặc **Claude De
 (thư viện `plxscripting`). Bạn ra lệnh bằng ngôn ngữ tự nhiên; Claude gọi các tool để tạo vật liệu,
 địa tầng, kết cấu, tải trọng, lưới, giai đoạn thi công, chạy tính toán và đọc kết quả.
 
-Gói có kèm bộ dựng **mô hình hầm chui / cống hộp dưới nền đắp** theo tham số: khung BTCT theo
-TCVN 5574:2018 và hoạt tải HL-93 theo TCVN 11823-3:2017.
+Ngoài các thao tác PLAXIS cơ bản, gói có thêm:
+* **Hầm chui / cống hộp** dưới nền đắp, dựng theo tham số: khung BTCT theo TCVN 5574:2018, hoạt tải HL-93 theo TCVN 11823-3:2017.
+* **Hầm tròn** đào từng bước: vỏ hầm theo từng đoạn, áp lực gương, lõi đất đã đào được đặt khô.
+* **Nhập dữ liệu**: hình học DXF/IFC từ Civil 3D, Revit; lỗ khoan từ Excel/CSV.
+* **Nước ngầm** theo từng giai đoạn thi công.
+* **Xuất kết quả** ra CSV/Excel: kết quả dọc một đường (lòng chảo lún), lịch sử theo giai đoạn, **ảnh kết quả Claude xem được**.
+* **Kiểm toán BTCT**: tổ hợp Cường độ I / Sử dụng I theo TCVN 11823-3; uốn kết hợp lực dọc, cắt, nứt theo TCVN 11823-5.
 
 ---
 
@@ -15,7 +20,7 @@ TCVN 5574:2018 và hoạt tải HL-93 theo TCVN 11823-3:2017.
 ```
 ┌──────────────┐  MCP (stdio)  ┌────────────────────┐ HTTP + password ┌──────────────────────┐
 │ Claude Code  │ ────────────► │ plaxis3d_mcp       │ ──────────────► │ PLAXIS 3D Input      │
-│ Claude Desk. │ ◄──────────── │ (Python, 42 tools) │  port 10000     │ Remote scripting     │
+│ Claude Desk. │ ◄──────────── │ (Python, 57 tools) │  port 10000     │ Remote scripting     │
 └──────────────┘               │  ops/  engineering/│ ──────────────► │ PLAXIS 3D Output     │
                                └────────────────────┘  port 10001/view└──────────────────────┘
 ```
@@ -25,8 +30,8 @@ TCVN 5574:2018 và hoạt tải HL-93 theo TCVN 11823-3:2017.
 | MCP | `server.py` | Khai báo tool; chạy lệnh PLAXIS trong luồng phụ (`anyio.to_thread`) có khóa (`RLock`), vì `plxscripting` là thư viện đồng bộ và không an toàn đa luồng |
 | Phiên | `session.py` | Giữ `(s_i, g_i)` (Input) và `(s_o, g_o)` (Output); đọc cấu hình từ biến môi trường |
 | Tiện ích | `plx.py` | Chuyển proxy PLAXIS sang JSON; lấy đối tượng theo tên; `setproperties` có kiểm soát lỗi |
-| Thao tác | `ops/*.py` | Project, địa tầng, vật liệu, kết cấu, tải trọng, lưới, giai đoạn, kết quả |
-| Kỹ thuật | `engineering/*.py` | Vật liệu mẫu (TCVN 5574), HL-93 qua lớp đắp (TCVN 11823-3), mô hình hầm chui |
+| Thao tác | `ops/*.py` | Project, địa tầng, vật liệu, kết cấu, tải trọng, lưới, giai đoạn, kết quả; `importers` (DXF, lỗ khoan), `water`, `export` (CSV/XLSX/ảnh), `design_check` |
+| Kỹ thuật | `engineering/*.py` | `presets` (TCVN 5574), `traffic` (HL-93), `culvert` (hầm chui), `tunnel` (hầm tròn), `design` (TCVN 11823-3/-5) |
 
 **Nguyên tắc thiết kế:**
 * **Không “nuốt” lỗi.** Thuộc tính bị PLAXIS từ chối (sai tên do khác phiên bản…) được trả về trong
@@ -40,24 +45,32 @@ TCVN 5574:2018 và hoạt tải HL-93 theo TCVN 11823-3:2017.
 
 ## 2. Yêu cầu
 
-* Windows có cài PLAXIS 3D 2025.1 (bản 2023.x/2024.x cũng dùng được, xem mục 9) và license còn hiệu lực.
+* Windows có cài PLAXIS 3D 2025.1 (bản 2023.x/2024.x cũng dùng được, xem mục 14) và license còn hiệu lực.
 * Python ≥ 3.10 (dùng Python cài riêng từ python.org; không bắt buộc dùng Python đi kèm PLAXIS).
 * Claude Code (CLI/VS Code) hoặc Claude Desktop.
 
-## 3. Cài đặt
+## 3. Cài đặt (một lệnh, trên terminal PowerShell)
 
 ```powershell
-# Giải nén thư mục PLAXIS3D_MCP, ví dụ vào D:\Tools\PLAXIS3D_MCP
+# Giải nén PLAXIS3D_MCP.zip, ví dụ vào D:\Tools\PLAXIS3D_MCP
 cd D:\Tools\PLAXIS3D_MCP
-powershell -ExecutionPolicy Bypass -File .\install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Password "tedi2025"
 ```
 
-Script sẽ tạo `.venv`, cài `mcp` và `plxscripting` (có trên PyPI), rồi in sẵn lệnh đăng ký với Claude Code.
+Script `install.ps1` làm lần lượt:
+1. Tìm Python ≥ 3.10.
+2. Tạo `.venv` và cài `mcp`, `plxscripting`, `ezdxf`, `openpyxl`, `pytest`.
+3. Chạy bộ kiểm thử.
+4. **Tự đăng ký với Claude Code**: `claude mcp add plaxis3d …`, mặc định `-Scope user` để dùng được ở mọi thư mục.
+5. Thử kết nối PLAXIS (`--check`).
+
+Tùy chọn khác: `-Scope project` ghi `.mcp.json` vào thư mục hiện tại; `-Port 10000`; `-NoRegister` chỉ cài, không đăng ký.
+
 Cài thủ công:
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\pip install -e .
+.\.venv\Scripts\pip install -e ".[all]"
 ```
 
 ## 4. Bật Remote Scripting trong PLAXIS 3D
@@ -69,23 +82,35 @@ py -3.12 -m venv .venv
 
 > Mật khẩu chỉ đặt trong biến môi trường `PLAXIS_PASSWORD`, không ghi vào mã nguồn hay repo.
 
-## 5. Kết nối Claude Code
+## 5. Dùng với Claude Code trên terminal
+
+```powershell
+# 1) Mở PLAXIS 3D Input, bật Remote scripting server (mục 4)
+# 2) Kiểm tra kết nối ngay trên terminal
+D:\Tools\PLAXIS3D_MCP\.venv\Scripts\python.exe -m plaxis3d_mcp --check
+#    [OK] Connected to PLAXIS: {...}
+# 3) Tăng thời gian chờ tool (tính toán lâu), rồi mở Claude Code
+$env:MCP_TOOL_TIMEOUT = "7200000"     # 2 giờ, đơn vị ms
+claude
+```
+
+Trong Claude Code:
+* `/mcp`: xem trạng thái server `plaxis3d` (connected) và danh sách tool.
+* Ra lệnh bằng tiếng Việt, ví dụ: *"Kết nối PLAXIS và dựng hầm chui 4x3.2 m, đắp 1.5 m"*.
+* Claude hỏi quyền trước khi gọi tool. Có thể cho phép luôn bằng `/permissions` → thêm `mcp__plaxis3d`.
+
+Tự đăng ký (không dùng `install.ps1`):
 
 ```powershell
 claude mcp add plaxis3d --scope user `
   -e PLAXIS_PASSWORD=tedi2025 `
   -- D:\Tools\PLAXIS3D_MCP\.venv\Scripts\python.exe -m plaxis3d_mcp
+claude mcp list          # kiểm tra
 ```
 
-Hoặc chép `examples/.mcp.json` vào thư mục dự án (cấu hình theo từng project). Kiểm tra bằng `/mcp` trong Claude Code.
+Hoặc chép `examples/.mcp.json` vào thư mục dự án. File này đọc mật khẩu từ biến môi trường `PLAXIS_PASSWORD`.
 
-**Thời gian tính toán dài:** `calculate` chờ đến khi PLAXIS tính xong. Hãy tăng thời gian chờ tool của Claude Code
-trước khi mở Claude Code, ví dụ 2 giờ:
-
-```powershell
-$env:MCP_TOOL_TIMEOUT = "7200000"   # ms
-claude
-```
+Lệnh chẩn đoán: `python -m plaxis3d_mcp --check` (thử kết nối) và `python -m plaxis3d_mcp --list-tools`.
 
 **Claude Desktop:** chép nội dung `examples/claude_desktop_config.json` vào
 `%APPDATA%\Claude\claude_desktop_config.json`.
@@ -100,7 +125,7 @@ claude
 
 ---
 
-## 6. Danh sách tool (42)
+## 6. Danh sách tool (57)
 
 | Nhóm | Tool |
 |---|---|
@@ -112,7 +137,12 @@ claude
 | Tải trọng | `surface_load_create`, `line_load_create`, `point_load_create` |
 | Tính toán | `mesh_generate`, `phase_create`, `phase_configure`, `phase_list`, `calculate` |
 | Kết quả | `output_connect`, `results_get` (min/max/|max| kèm tọa độ), `results_at_point`, `results_plate_forces` |
-| Kỹ thuật | `hl93_live_load_through_fill`, `concrete_properties`, `box_culvert_layout`, `build_box_culvert` |
+| Hầm chui | `build_box_culvert`, `box_culvert_layout`, `hl93_live_load_through_fill`, `concrete_properties` |
+| Hầm tròn | `build_tunnel` |
+| Nhập dữ liệu | `import_geometry` (trình nhập của PLAXIS), `import_dxf` (ezdxf, lọc layer, dời gốc VN-2000), `import_boreholes` (CSV/XLSX) |
+| Nước ngầm | `water_borehole_head`, `water_level_create`, `water_phase_settings`, `water_soil_condition` |
+| Xuất kết quả | `results_export` (CSV/XLSX), `results_along_line`, `results_history`, `plot_image` (trả ảnh PNG) |
+| Thiết kế | `design_check_plates`, `rc_section_check`, `load_factors` |
 
 Quy ước: đơn vị kN, m, kPa. Trục Z hướng lên, tải hướng xuống mang dấu âm (`sigz < 0`).
 Trong giá trị thuộc tính, chuỗi bắt đầu bằng `@` là tham chiếu đối tượng, ví dụ `{"Material": "@PlateMat_2"}`.
@@ -215,7 +245,96 @@ Dùng `box_culvert_layout` để xem trước hình học mà không cần gọi
 
 ---
 
-## 8. Ví dụ câu lệnh cho Claude
+## 8. Hầm tròn đào từng bước (`build_tunnel`)
+
+**Cách dựng:** không dùng Tunnel Designer mà dựng từ đối tượng cơ bản. Nhờ vậy mỗi bước đào là một đối tượng có tên
+riêng, và việc kích hoạt theo giai đoạn được viết script hoàn toàn, không phải chọn cluster bằng chuột.
+
+| Thành phần | Mô hình |
+|---|---|
+| Lõi đất bước *i* | Đa giác `n_facets` cạnh (mặc định 16), đùn theo +Y một đoạn `round_length` |
+| Vỏ hầm bước *i* | `n_facets` plate trên mặt trung bình bán kính `radius`; mặt *positive* hướng ra đất |
+| Áp lực gương | Tải mặt `sigy = +face_pressure` tại gương sau bước *i* (tác dụng vào đất phía trước) |
+
+**Trình tự giai đoạn:**
+1. Initial (K0).
+2. Bước *k* = 1…N: vô hiệu hóa lõi *k* và đặt điều kiện nước **Dry**; bật áp lực gương *k*, tắt gương *k−1*;
+   lắp vỏ các vòng ≤ *k − unsupported_rounds*.
+3. Khép vỏ: lắp các vòng còn lại và bỏ áp lực gương.
+
+**Cơ sở kỹ thuật:**
+* Chiều dài không chống `unsupported_rounds × round_length` là cách chính mô phỏng biến dạng trước khi lắp vỏ
+  (phương pháp tiến dần, hay dùng cho NATM). Mô hình **không** dùng hệ số giảm tải β như phương pháp hội tụ – chống đỡ 2D.
+* Với hầm khiên (TBM), áp lực gương thường lấy trong khoảng áp lực đất tĩnh tại tim hầm cộng áp lực nước
+  (tham khảo DAUB, BTS). Cần kiểm tra ổn định gương riêng, ví dụ theo Anagnostou–Kovári.
+* Lõi đất dùng một vật liệu (`core_material`). Vật liệu này chỉ ảnh hưởng đến ứng suất ban đầu trước khi đào.
+
+## 9. Nhập dữ liệu từ Civil 3D / Revit / Excel
+
+| Nguồn | Cách làm | Tool |
+|---|---|---|
+| Civil 3D (mặt địa hình, kết cấu 3D) | Xuất DXF gồm 3DFACE, polyline đóng hoặc mesh; lọc theo layer; dời gốc tọa độ VN-2000 về gốc mô hình bằng `offset`; `scale = 0.001` nếu bản vẽ theo mm | `import_dxf` |
+| Revit | Export IFC hoặc DXF rồi dùng trình nhập của PLAXIS; hoặc DXF qua `import_dxf` để kiểm soát layer | `import_geometry`, `import_dxf` |
+| Hồ sơ khảo sát (Excel) | Bảng gồm các cột `borehole, x, y, top, bottom, material, head`; mỗi dòng là một lớp, từ trên xuống | `import_boreholes` |
+
+Lưu ý về lỗ khoan: các lỗ khoan trong PLAXIS **dùng chung một thứ tự lớp**. Lớp bị vát nhọn (không có ở một lỗ khoan)
+thì nhập với chiều dày 0 (`top = bottom`). Tool kiểm tra các lớp liền nhau khớp cao độ và báo lỗi nếu thứ tự lớp khác nhau.
+
+## 10. Nước ngầm theo giai đoạn
+
+* `water_borehole_head`: mực nước theo lỗ khoan.
+* `water_level_create`: mực nước người dùng qua 3 điểm, ví dụ mực nước hạ trong hố đào.
+* `water_phase_settings`: kiểu tính áp lực nước lỗ rỗng (phreatic / steady / previous) và mực nước toàn cục của phase.
+* `water_soil_condition`: điều kiện nước của cluster theo phase (Dry, Head, Interpolate…).
+
+Lý do cần đặt khô vùng đất đã đào: nếu cluster đã vô hiệu hóa nằm dưới mực nước mà không đặt **Dry**,
+PLAXIS vẫn tác dụng áp lực nước lên biên hố đào. `build_tunnel` tự đặt khô lõi đất đã đào.
+
+## 11. Xuất kết quả và ảnh
+
+* `results_export`: X, Y, Z và các đại lượng (cùng nhóm, ví dụ `Plate.M11`, `Plate.N1`) ra `.csv` (UTF-8 BOM, Excel đọc đúng tiếng Việt) hoặc `.xlsx`.
+* `results_along_line`: lấy mẫu kết quả trên một đường thẳng, ví dụ lòng chảo lún mặt đất ngang tim hầm; so sánh được với đường cong Gauss của Peck (1969).
+* `results_history`: một điểm qua tất cả các phase, ví dụ độ lún tim đường theo từng giai đoạn đắp.
+* `plot_image`: xuất ảnh PNG của cửa sổ Output (có thể đổi phase / đại lượng trước khi xuất) và **trả ảnh cho Claude xem**.
+
+## 12. Tổ hợp tải trọng và kiểm toán BTCT (TCVN 11823)
+
+### 12.1 Tổ hợp theo nguyên tắc "nhân hệ số cho hiệu ứng"
+Phân tích PTHH phi tuyến không cộng tác dụng chính xác được. Vì vậy tool dùng:
+
+```
+E_P  = kết quả phase tĩnh tải cuối (bản thân, EV, EH)      E_LL = kết quả(phase hoạt tải) − E_P
+Cường độ I : E_u = η·(γ_P·E_P + 1,75·E_LL),  γ_P ∈ {1,35 ; 0,90}
+Sử dụng I  : E_s = E_P + 1,00·E_LL
+```
+
+γ_P max = 1,35 là giá trị lớn nhất trong các hệ số DC 1,25; EV khung cứng 1,35; EH tĩnh 1,35 (Bảng 3.4.1-2), nên thiên về an toàn.
+Muốn tách riêng DC, EV, EH, hoặc xét trường hợp giảm 50 % áp lực ngang (AASHTO 3.11.7), cần chạy thêm các mô hình riêng.
+Tra bảng hệ số bằng `load_factors`.
+
+### 12.2 Kiểm toán tiết diện (dải rộng 1 m, không có cốt thép đai)
+
+| Nội dung | Công thức / điều khoản (TCVN 11823-5 ≡ AASHTO 2014) |
+|---|---|
+| Uốn + lực dọc | Tương thích biến dạng, ε_cu = 0,003, khối ứng suất 0,85f'c·β₁c (§5.7.2); φ chuyển từ 0,75 sang 0,90 theo ε_t (§5.5.4.2) |
+| Cắt, bản cống hộp có lớp đắp ≥ 0,6 m | V_c = (0,178√f'c + 32ρ·V_u·d_e/M_u)·b·d_e ≤ 0,332√f'c·b·d_e, ≥ 0,25√f'c·b·d_e (§5.14.5.3) |
+| Cắt, tường và bản có lớp đắp mỏng | V_c = 0,083·β·√f'c·b·d_v, β = 2 (§5.8.3.4.1); φ_v = 0,9 |
+| Nứt | s ≤ 123000·γ_e/(β_s·f_ss) − 2d_c, β_s = 1 + d_c/(0,7(h−d_c)) (§5.7.3.4); f_ss tính theo tiết diện nứt đàn hồi, n = E_s/E_c |
+| E_c | 0,043·w_c^1,5·√f'c (§5.4.2.4) |
+
+**Ví dụ tính tay:** h = 500, d = 440 mm, A_s = 1340 mm²/m, f'c = 30 MPa, f_y = 400 MPa.
+* a = 1340·400/(0,85·30·1000) = 21,0 mm.
+* M_n = 1340·400·(440 − 10,5) = 230,2 kNm/m.
+* φM_n = 0,9 × 230,2 = **207,2 kNm/m**. `rc_section_check` cho cùng kết quả.
+
+**Quy ước và lưu ý:**
+* Lực dọc N của PLAXIS **dương khi kéo**; tool đổi sang P_u **dương khi nén**.
+* `as_pos` là cốt thép ở mặt chịu kéo khi mô men **dương theo trục cục bộ của plate trong PLAXIS**. Hãy kiểm tra dấu
+  trên một cấu kiện đơn giản trước khi dùng. Hướng 1 dùng M11/N1/Q13, hướng 2 dùng M22/N2/Q23 (khai báo cốt thép hướng 2 qua `dir2`).
+* Mác bê tông: TCVN 11823 dùng f'c (cường độ mẫu trụ). Không lấy trực tiếp cấp B theo TCVN 5574 để làm f'c.
+* Chưa kiểm tra: cốt thép tối thiểu (§5.7.3.3.2), mỏi, neo và nối cốt thép. Các mục này vẫn phải kiểm tra riêng.
+
+## 13. Ví dụ câu lệnh cho Claude
 
 ```
 Kết nối PLAXIS 3D, tạo project mới "HC KM77+633", dựng hầm chui 6x4.5 m, bản nắp 0.6, bản đáy 0.65,
@@ -233,9 +352,26 @@ Lập bảng so sánh và chỉ ra khi nào tải xe hai trục khống chế.
 Đọc độ lún Uz tại tim đường (0,0,He) sau phase đắp nền và sau phase hoạt tải.
 ```
 
+```
+Nhập lỗ khoan từ D:/KhaoSat/HoKhoan.xlsx, rồi dựng hầm tròn R = 5 m, tim tại z = -18, 12 bước đào,
+mỗi bước 1.5 m, vỏ hầm B40 dày 0.35 m, lắp chậm 1 bước sau gương, áp lực gương 150 kPa.
+Tính toán, xuất lòng chảo lún mặt đất ngang tim hầm tại y = 9 m ra D:/KetQua/longchao.xlsx
+và cho tôi xem ảnh chuyển vị tổng của phase cuối.
+```
+
+```
+Kiểm toán bản nắp, bản đáy, tường hầm chui theo TCVN 11823 cho phase đắp nền (tĩnh tải) và phase hoạt tải:
+bản nắp h = 600, thép D20a150 cả hai mặt, lớp bảo vệ 60 mm, f'c = 30 MPa, CB400-V. Xuất bảng chi tiết ra CSV.
+```
+
+```
+Nhập file D:/Civil3D/cau_truc.dxf, chỉ lấy layer "TUONG" và "BAN", dời gốc (585000, 2320000, 0), tạo plate
+với vật liệu Culvert_wall_B30.
+```
+
 ---
 
-## 9. Hạn chế, rủi ro và cách kiểm chứng
+## 14. Hạn chế, rủi ro và cách kiểm chứng
 
 1. **Phiên bản API.** Tên thuộc tính lấy theo PLAXIS 3D CONNECT/2023+ (`Identification`, `Gamma`, `E1`, `nu12`,
    `sigz`, `DeformCalcType`). Phiên bản cũ dùng tên khác (`MaterialName`, `w`…); tool sẽ báo trong `warnings`.
@@ -249,15 +385,30 @@ Lập bảng so sánh và chỉ ra khi nào tải xe hai trục khống chế.
    (`Plate_1_1`…). Tool thử kích hoạt theo tên cha trước; nếu không được thì kích hoạt từng con có tiền tố `Plate_1_`.
 4. **`calculate` chặn** cho đến khi tính xong. Cần tăng `MCP_TOOL_TIMEOUT`, hoặc chạy từng phase bằng tham số `phases`.
 5. **`plaxis_python`** thực thi mã tùy ý trên máy của bạn, chỉ bật khi thực sự cần.
-6. Kết quả PTHH phải được kiểm tra bằng tính toán độc lập, ví dụ khung phẳng với áp lực HL-93 đã phân bố
+6. **Các lệnh chưa chắc chắn theo phiên bản** (tool đều thử nhiều cách và báo `warnings` nếu thất bại):
+   * gán mực nước toàn cục của phase (`setglobalwaterlevel` hoặc thuộc tính);
+   * `WaterConditions.Conditions` / `h` của cluster;
+   * xuất ảnh Output (`plot.export`);
+   * `importgeometry`.
+   Nếu thất bại, dùng `plaxis_command` với cú pháp trong *PLAXIS 3D Command Reference* của đúng phiên bản.
+7. **Kiểm toán BTCT** chỉ là công cụ hỗ trợ: tổ hợp theo nguyên tắc nhân hệ số cho hiệu ứng (mục 12.1) và quy ước dấu
+   mô men theo trục cục bộ plate phải được kỹ sư xác nhận.
+8. Kết quả PTHH phải được kiểm tra bằng tính toán độc lập, ví dụ khung phẳng với áp lực HL-93 đã phân bố
    và áp lực ngang K0/Ka, trước khi đưa vào hồ sơ thiết kế.
 
-## 10. Kiểm thử
+## 15. Kiểm thử
 
 ```powershell
-.\.venv\Scripts\pip install -e .[test]
+.\.venv\Scripts\pip install -e ".[all]"
 .\.venv\Scripts\python -m pytest -q
 ```
 
-Có 16 test: phân bố HL-93 (có ví dụ tính tay), IM, hình học cống, hướng pháp tuyến, cắt đa giác,
-thao tác vật liệu và giai đoạn trên PLAXIS giả lập, dựng toàn bộ mô hình qua tool MCP. Đã chạy đạt với MCP SDK 1.x và 2.x.
+Có 30 test:
+* HL-93 và IM (có ví dụ tính tay), hình học cống, pháp tuyến plate và vỏ hầm, cắt đa giác.
+* Trình tự đào hầm: lắp vỏ chậm, áp lực gương di chuyển theo gương, lõi đất đã đào được đặt khô.
+* Nhập lỗ khoan CSV (kể cả lớp dày 0 và lỗi thứ tự lớp), nhập DXF (ezdxf), nước ngầm, xuất CSV, kết quả dọc đường,
+  lịch sử theo phase, ảnh PNG.
+* Uốn (khớp với ví dụ tính tay), ảnh hưởng của lực dọc, cắt, nứt, tổ hợp tải, kiểm toán plate từ kết quả Output giả lập.
+* Dựng toàn bộ mô hình qua tool MCP.
+
+Đã chạy đạt với MCP SDK 1.x và 2.x.

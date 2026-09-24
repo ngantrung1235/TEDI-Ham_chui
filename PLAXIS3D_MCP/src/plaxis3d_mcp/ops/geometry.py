@@ -54,8 +54,9 @@ def create_borehole(
     """
     _, g_i = sess.input()
     levels = [float(z) for z in layer_levels]
-    if len(levels) < 2 or any(a <= b for a, b in zip(levels, levels[1:])):
-        raise RuntimeError("layer_levels must be >= 2 strictly decreasing elevations (top to bottom).")
+    # equal consecutive levels = zero-thickness layer (needed when a layer pinches out)
+    if len(levels) < 2 or any(a < b for a, b in zip(levels, levels[1:])) or levels[0] <= levels[-1]:
+        raise RuntimeError("layer_levels must be >= 2 non-increasing elevations (top to bottom), top > bottom.")
     g_i.gotosoil()
     borehole = g_i.borehole(x, y)
     warnings: list[str] = []
