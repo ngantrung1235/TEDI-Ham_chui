@@ -173,5 +173,36 @@ def revit_set_parameters(element_id: int, values: dict[str, Any]) -> Any:
     return call_revit("set_parameters", {"id": element_id, "values": values})
 
 
+@mcp.tool()
+def revit_get_draw_all_rebar_settings() -> Any:
+    """Thong so mac dinh (mm) cua lenh "Ve tat ca thep" ham chui + model da co RebarShape Rebar_21 chua.
+
+    Goi truoc revit_draw_all_rebar de trinh bay bang thong so cho nguoi dung xac nhan.
+    """
+    return call_revit("get_draw_all_rebar_settings")
+
+
+@mcp.tool()
+def revit_draw_all_rebar(settings: dict[str, float] | None = None, host_ids: list[int] | None = None) -> Any:
+    """SUA MODEL: ve toan bo cot thep than ham (nut "Ve tat ca thep") cho cac cau kien dang chon.
+
+    Quy trinh: (1) goi revit_get_draw_all_rebar_settings, trinh bay thong so va XAC NHAN voi
+    nguoi dung; (2) dan nguoi dung: sau khi goi lenh, trong Revit phai pick lan luot 3 mat cho
+    TUNG cau kien - MAT BANG (day/nap), MAT DUNG (tuong trai/phai), MAT CANH (dau dot); Esc de huy.
+    Lenh cho toi 30 phut trong luc nguoi dung pick. Moi nhom thep commit Transaction rieng.
+
+    Args:
+        settings: Ghi de thong so (mm), vd. {"CoverMm": 50, "DiamS1Mm": 25, "SpaceS1Mm": 125}.
+            Ten hop le lay tu revit_get_draw_all_rebar_settings; bo trong = mac dinh theo ban ve.
+        host_ids: ElementId cac dot ham can ve; bo trong = dung selection hien tai trong Revit.
+    """
+    params: dict[str, Any] = {}
+    if settings:
+        params["settings"] = settings
+    if host_ids:
+        params["host_ids"] = host_ids
+    return call_revit("draw_all_rebar", params, timeout=31 * 60)
+
+
 if __name__ == "__main__":
     mcp.run()

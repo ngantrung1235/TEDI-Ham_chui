@@ -8,7 +8,7 @@ namespace TEDI_Ham_chui_model.ExternalCommands
 {
     // Nut "Ve tat ca thep" - entry point Revit mong: mo form nhap D/spacing/cover
     // (Views/RebarAllInOneInput.xaml), roi giao toan bo logic pick + tao thep cho
-    // RebarAllInOneViewModel (xem ViewModels/RebarAllInOneViewModel.cs).
+    // RebarAllInOneViewModel (thong so + Run() o Models/RebarAllInOneSettings.cs).
     [Transaction(TransactionMode.Manual)]
     public class RebarAllInOneCommand : IExternalCommand
     {

@@ -19,6 +19,7 @@
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
     <RevitVersion>2024</RevitVersion>
+    <DefineConstants>$(DefineConstants);REVIT2024</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
     <RevitVersion>2027</RevitVersion>
@@ -32,12 +33,28 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
+  <!--
+    Logic "Ve tat ca thep" dung CHUNG source voi add-in chinh (link file, khong copy),
+    de lenh draw_all_rebar chay duoc ca tren Revit 2024 du add-in chinh chi build cho 2027.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TEDI_Ham_chui_model\Models\RebarAllInOneSettings.cs" Link="HamChui\RebarAllInOneSettings.cs" />
+    <Compile Include="..\TEDI_Ham_chui_model\Models\RebarCommon.cs" Link="HamChui\RebarCommon.cs" />
+    <Compile Include="..\TEDI_Ham_chui_model\Models\RebarStirrupCLogic.cs" Link="HamChui\RebarStirrupCLogic.cs" />
+    <Compile Include="..\TEDI_Ham_chui_model\Models\RebarOuterShapeLogic.cs" Link="HamChui\RebarOuterShapeLogic.cs" />
+    <Compile Include="..\TEDI_Ham_chui_model\Models\RebarInnerSingleLogic.cs" Link="HamChui\RebarInnerSingleLogic.cs" />
+    <Compile Include="..\TEDI_Ham_chui_model\Models\RebarChamferLogic.cs" Link="HamChui\RebarChamferLogic.cs" />
+    <Compile Include="..\TEDI_Ham_chui_model\Models\ChamferCornerReinforcement.cs" Link="HamChui\ChamferCornerReinforcement.cs" />
+    <!-- Rebar_21.rfa luu bang Revit 2027 -> chi kem ban 2027; Revit 2024 can RebarShape tao bang 2024. -->
+    <None Include="..\TEDI_Ham_chui_model\Rebar_21.rfa" Link="Rebar_21.rfa" CopyToOutputDirectory="PreserveNewest" Condition="'$(TargetFramework)' != 'net48'" />
+  </ItemGroup>
+
   <Target Name="DeployToRevit" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT' And '$(TargetFramework)' != ''">
     <PropertyGroup>
       <RevitAddinRoot>$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)</RevitAddinRoot>
     </PropertyGroup>
     <ItemGroup>
-      <BridgeDlls Include="$(TargetDir)*.dll" />
+      <BridgeDlls Include="$(TargetDir)*.dll;$(TargetDir)*.rfa" />
     </ItemGroup>
     <Copy SourceFiles="@(BridgeDlls)" DestinationFolder="$(RevitAddinRoot)\TEDI_ClaudeBridge" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)TEDI_ClaudeBridge.addin" DestinationFolder="$(RevitAddinRoot)" SkipUnchangedFiles="true" />

@@ -29,7 +29,11 @@ namespace TEDI_ClaudeBridge
         public const int DefaultPort = 48884;
         private const int PortSearchRange = 10;
         private const int MaxRequestChars = 1_000_000;
-        private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(60);
+        // Cho toi da StartTimeout de Revit BAT DAU xu ly (Revit ban hop thoai/lenh khac thi
+        // bao loi som); da bat dau thi cho toi RunTimeout - du cho draw_all_rebar, lenh
+        // phai doi nguoi dung pick 3 mat cho tung cau kien.
+        private static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(60);
+        private static readonly TimeSpan RunTimeout = TimeSpan.FromMinutes(30);
 
         public static string ConnectionFilePath { get; } = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -214,18 +218,22 @@ namespace TEDI_ClaudeBridge
                 ExternalEventRequest raised = _externalEvent!.Raise();
                 if (raised == ExternalEventRequest.Denied || raised == ExternalEventRequest.TimedOut)
                 {
-                    bridgeRequest.Completion.TrySetCanceled();
+                    bridgeRequest.Started.TrySetCanceled();
                     return Error(requestId, $"Revit tu choi ExternalEvent ({raised}).");
                 }
 
-                Task finished = await Task.WhenAny(bridgeRequest.Completion.Task, Task.Delay(RequestTimeout)).ConfigureAwait(false);
-                if (finished != bridgeRequest.Completion.Task)
+                await Task.WhenAny(bridgeRequest.Started.Task, Task.Delay(StartTimeout)).ConfigureAwait(false);
+                if (bridgeRequest.Started.TrySetCanceled())
                 {
                     bridgeRequest.Completion.TrySetCanceled();
                     return Error(requestId,
-                        "Revit khong phan hoi trong " + RequestTimeout.TotalSeconds + " giay. " +
+                        "Revit khong phan hoi trong " + StartTimeout.TotalSeconds + " giay. " +
                         "Co the dang mo 1 hop thoai/lenh khac - hay dong no roi thu lai.");
                 }
+
+                Task finished = await Task.WhenAny(bridgeRequest.Completion.Task, Task.Delay(RunTimeout)).ConfigureAwait(false);
+                if (finished != bridgeRequest.Completion.Task)
+                    return Error(requestId, "Lenh chay qua " + RunTimeout.TotalMinutes + " phut, ngung cho ket qua.");
 
                 JToken? result = await bridgeRequest.Completion.Task.ConfigureAwait(false);
                 return new JObject { ["id"] = requestId, ["ok"] = true, ["result"] = result };

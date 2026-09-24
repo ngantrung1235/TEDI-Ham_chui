@@ -1,6 +1,6 @@
 # Kết nối Claude ↔ Revit (MCP)
 
-Cho phép Claude (Claude Desktop hoặc Claude Code **chạy trên cùng máy Windows với Revit**) đọc và chỉnh model Revit đang mở: tra cứu phần tử và parameter, thống kê thép, chọn/zoom phần tử, gán giá trị parameter.
+Cho phép Claude (Claude Desktop hoặc Claude Code **chạy trên cùng máy Windows với Revit**) đọc và chỉnh model Revit đang mở: tra cứu phần tử và parameter, thống kê thép, chọn/zoom phần tử, gán giá trị parameter, và **chạy lệnh "Vẽ tất cả thép" thân hầm**.
 
 Hỗ trợ **Revit 2024** (.NET Framework 4.8) và **Revit 2027** (.NET 10).
 
@@ -106,6 +106,8 @@ claude mcp add revit -- python "<thư mục repo>\ClaudeRevitMCP\revit_mcp_serve
 | `revit_get_rebar_summary` | Số thanh, tổng chiều dài (m), khối lượng danh nghĩa (kg) theo loại thanh | Không |
 | `revit_select_elements` | Chọn và zoom tới các phần tử | Chỉ đổi selection |
 | `revit_set_parameters` | Gán parameter trong 1 Transaction; chỉ cần 1 giá trị lỗi là hủy cả lô; hoàn tác được bằng Ctrl+Z | **Có** |
+| `revit_get_draw_all_rebar_settings` | Thông số mặc định (mm) của lệnh Vẽ tất cả thép; cho biết model đã có RebarShape `Rebar_21` chưa | Không |
+| `revit_draw_all_rebar` | Vẽ thép thân hầm cho các đốt đang chọn (hoặc `host_ids`), có thể ghi đè thông số | **Có** |
 
 Quy ước đơn vị:
 
@@ -116,13 +118,44 @@ Quy ước đơn vị:
   - Chuỗi như `"2500 mm"` được Revit tự phân tích.
 - Khối lượng thép danh nghĩa tính theo `π·d²/4 × L × 7850 kg/m³`, với `d` = `BarNominalDiameter`. Chỉ tính đối tượng `Rebar`, không tính Area/Path Reinforcement. Chỉ dùng để kiểm tra nhanh; bảng thống kê thép chính thức vẫn lập theo schedule của dự án.
 
-## 5. Xử lý sự cố
+## 5. Vẽ tất cả thép qua Claude
+
+Lệnh `revit_draw_all_rebar` chạy **đúng logic** của nút "Vẽ tất cả thép" trong add-in chính: bridge link trực tiếp các file `Models/*.cs`, không sao chép code. Thông số và hàm `Run()` nằm trong `Models/RebarAllInOneSettings.cs`, được dùng chung cho cả form WPF và Claude.
+
+Trình tự:
+
+1. Claude gọi `revit_get_draw_all_rebar_settings` và đưa bảng thông số cho anh/chị xác nhận hoặc sửa. Bảng gồm:
+   - Lớp bảo vệ: `CoverMm`
+   - Đường kính và khoảng cách: S1/F1/H1, S2/F2, S4/F4/H2, S6/F6/H3, S5
+   - `VuonMm`
+   - Hai hằng số hiệu chỉnh của Rebar_21
+2. Claude gọi `revit_draw_all_rebar`. Trong Revit, anh/chị **pick 3 mặt cho từng đốt**:
+   1. Mặt bằng (đáy hoặc nắp)
+   2. Mặt đứng (tường trái hoặc phải)
+   3. Mặt cạnh (đầu đốt)
+
+   Bấm Esc để hủy; khi hủy ở bước pick thì chưa có thanh thép nào được tạo. Lệnh chờ tối đa 30 phút.
+3. Kết quả trả về gồm:
+   - Báo cáo của từng nhóm thép
+   - Thống kê các thanh **vừa tạo** theo loại thanh (số thanh, chiều dài, khối lượng danh nghĩa)
+   - Thông số đã dùng
+
+> **Revit 2024 và `Rebar_21`:** file `Rebar_21.rfa` trong repo được lưu bằng **Revit 2027**, nên Revit 2024 không load được (Revit không cho mở family lưu bằng phiên bản mới hơn). Trên Revit 2024, model phải **có sẵn RebarShape `Rebar_21` tạo bằng Revit 2024**. Nếu chưa có, lệnh sẽ báo lỗi **trước khi** yêu cầu pick, để không vẽ dở dang. Model mẫu `SampleModels/HamChui_KM77+633.rvt` cũng là file 2027.
+
+> Mỗi nhóm thép commit trong một Transaction riêng: S4/F4/H2 + đai C → Rebar_21 (S2/F2) → S1/F1/H1 → S5. Nếu một nhóm lỗi giữa chừng, các nhóm đã chạy xong vẫn được giữ lại, và thông báo lỗi sẽ cho biết đã tạo bao nhiêu đối tượng Rebar. Muốn hoàn tác thì bấm Ctrl+Z cho từng bước.
+
+> Để lệnh chạy được trên Revit 2024, việc tạo thanh thép không móc dùng hàm `RebarCommon.CreateFromCurvesNoHooks`:
+> - Revit 2025 trở lên dùng `BarTerminationsData`.
+> - Revit 2024 dùng overload cũ, hook = `null`. Hằng biên dịch `REVIT2024` chỉ bật khi build bản `net48`.
+
+## 6. Xử lý sự cố
 
 | Hiện tượng | Nguyên nhân / cách xử lý |
 |---|---|
 | Không thấy tab **TEDI Claude** | Chưa khởi động lại Revit sau khi build; hoặc thiếu `TEDI_ClaudeBridge.addin` trong `Addins\2024`; hoặc bấm nhầm "Do not load" ở hộp thoại bảo mật. |
 | Claude báo "Không thấy …claude_bridge.json" | Chưa bấm **Kết nối Claude**, hoặc đã tắt/đóng Revit. |
 | Claude báo "Không kết nối được Revit" | Revit đã đóng nhưng file kết nối còn sót lại. Mở Revit rồi bấm lại nút. |
-| "Revit không phản hồi trong 60 giây" | Revit đang mở hộp thoại hoặc chạy lệnh khác (ví dụ form **Vẽ tất cả thép**). Đóng hộp thoại đó rồi hỏi lại. |
+| "Revit không phản hồi trong 60 giây" | Revit chưa **bắt đầu** xử lý lệnh trong 60 giây vì đang mở hộp thoại hoặc chạy lệnh khác (ví dụ form **Vẽ tất cả thép**). Đóng hộp thoại đó rồi hỏi lại. Khi lệnh đã bắt đầu (ví dụ đang chờ pick mặt), thời gian chờ là 30 phút. |
+| "Model chưa có RebarShape 'Rebar_21'…" | Xem mục 5: cần RebarShape `Rebar_21` tạo bằng đúng phiên bản Revit đang dùng. |
 | "Sai token" | Đã tắt/bật lại cầu nối trong lúc Claude đang gọi lệnh. Gọi lại là được, vì MCP server đọc file kết nối mới ở mỗi lần gọi. |
 | Cổng 48884 đã bị chiếm | Add-in tự thử các cổng 48884–48893. Có thể đặt cổng khác bằng biến môi trường `TEDI_REVIT_BRIDGE_PORT` trước khi mở Revit. |

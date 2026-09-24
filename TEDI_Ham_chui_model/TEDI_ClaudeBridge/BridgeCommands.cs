@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
+using TEDI_Ham_chui_model.Models;
 
 namespace TEDI_ClaudeBridge
 {
@@ -14,8 +17,8 @@ namespace TEDI_ClaudeBridge
     //  - toa do / chieu dai hinh hoc: mm (doi tu don vi noi bo feet cua Revit);
     //  - gia tri parameter: "value" = chuoi hien thi theo don vi du an (AsValueString),
     //    "raw" = gia tri noi bo (feet, rad...) de tinh toan neu can.
-    // CHI co set_parameters la thay doi model (trong 1 Transaction, loi 1 param la
-    // rollback ca lo).
+    // set_parameters (1 Transaction, loi 1 param la rollback ca lo) va draw_all_rebar
+    // (logic nut "Ve tat ca thep" cua add-in ham chui) la 2 lenh thay doi model.
     internal static class BridgeCommands
     {
         private const int DefaultListLimit = 200;
@@ -44,6 +47,10 @@ namespace TEDI_ClaudeBridge
                     return SelectElements(RequireUiDoc(app), p);
                 case "get_rebar_summary":
                     return GetRebarSummary(RequireUiDoc(app), p);
+                case "get_draw_all_rebar_settings":
+                    return GetDrawAllRebarSettings(RequireUiDoc(app).Document);
+                case "draw_all_rebar":
+                    return DrawAllRebar(RequireUiDoc(app), p);
                 default:
                     throw new InvalidOperationException($"Lenh khong ho tro: '{method}'.");
             }
@@ -199,7 +206,11 @@ namespace TEDI_ClaudeBridge
                 var selected = new HashSet<long>(uidoc.Selection.GetElementIds().Select(id => id.Value));
                 rebars = rebars.Where(r => selected.Contains(r.Id.Value) || selected.Contains(r.GetHostId().Value));
             }
+            return SummarizeRebars(doc, rebars);
+        }
 
+        private static JObject SummarizeRebars(Document doc, IEnumerable<Rebar> rebars)
+        {
             var groups = rebars
                 .GroupBy(r => r.GetTypeId().Value)
                 .Select(g =>
@@ -237,6 +248,122 @@ namespace TEDI_ClaudeBridge
                 ["total_nominal_weight_kg"] = Math.Round(groups.Sum(x => x.WeightKg), 1),
                 ["note"] = "Khoi luong danh nghia = pi*d^2/4 x L x 7850 kg/m3 (d = BarNominalDiameter).",
             };
+        }
+
+        // ------------------------------------------------------------------ ve thep ham chui
+
+        private const string OuterShapeName = "Rebar_21";
+
+        // Cac thong so double co the ghi de cua RebarAllInOneSettings (CoverMm, DiamS1Mm,
+        // SpaceS1Mm, ..., VuonMm) - lay bang reflection de tu khop khi add-in them thong so.
+        private static IEnumerable<PropertyInfo> DrawSettingProperties() =>
+            typeof(RebarAllInOneSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(pi => pi.PropertyType == typeof(double) && pi.CanRead && pi.CanWrite);
+
+        private static JToken GetDrawAllRebarSettings(Document doc)
+        {
+            var defaults = new RebarAllInOneSettings();
+            var values = new JObject();
+            foreach (PropertyInfo pi in DrawSettingProperties())
+                values[pi.Name] = (double)pi.GetValue(defaults)!;
+
+            return new JObject
+            {
+                ["defaults_mm"] = values,
+                ["outer_shape_available"] = OuterShapeAvailable(doc),
+                ["legend"] = "S=Nap, F=Day, H=Tuong trai+phai. S1/F1/H1 thep ngang lop trong; S2/F2 thep " +
+                             "hinh Z (RebarShape Rebar_21); S4/F4/H2 thep doc; S6/F6/H3 dai C; S5 thep cheo " +
+                             "goc vat (VuonMm = doan vuon 2 dau). Diam* = duong kinh, Space* = khoang cach (mm). " +
+                             "ShapeUTipMm/ShapeCEndCompensationMm: hieu chinh hinh hoc Rebar_21, do cho B=3500mm + D20.",
+            };
+        }
+
+        // Chay logic nut "Ve tat ca thep": dung cau kien dang chon (hoac host_ids), NGUOI
+        // DUNG phai pick 3 mat (mat bang / mat dung / mat canh) cho TUNG cau kien trong
+        // Revit, roi ve S4/F4/H2 + dai C, Rebar_21 (S2/F2), S1/F1/H1, S5 - moi nhom 1
+        // Transaction rieng.
+        private static JToken DrawAllRebar(UIDocument uidoc, JObject p)
+        {
+            Document doc = uidoc.Document;
+            var settings = new RebarAllInOneSettings();
+            if (p["settings"] is JObject overrides)
+                ApplyDrawSettings(settings, overrides);
+
+            if (p["host_ids"] is JArray)
+                uidoc.Selection.SetElementIds(GetIdList(p, "host_ids").Where(id => doc.GetElement(id) != null).ToList());
+            if (uidoc.Selection.GetElementIds().Count == 0)
+                throw new InvalidOperationException(
+                    "Chua chon cau kien ham nao. Chon cau kien trong Revit (hoac truyen host_ids) roi chay lai.");
+
+            // Kiem tra truoc khi bat nguoi dung pick: thieu Rebar_21 thi buoc S2/F2 se loi
+            // SAU KHI cac buoc truoc da commit thep -> bao som thay vi ve do dang.
+            if (!OuterShapeAvailable(doc))
+                throw new InvalidOperationException(
+                    $"Model chua co RebarShape '{OuterShapeName}' va khong co file {OuterShapeName}.rfa dung phien ban " +
+                    "canh add-in. File Rebar_21.rfa trong repo luu bang Revit 2027 nen Revit 2024 KHONG load duoc: " +
+                    "hay tao lai RebarShape 'Rebar_21' bang Revit 2024 (hoac load vao model thu cong) roi chay lai.");
+
+            var before = new HashSet<long>(new FilteredElementCollector(doc).OfClass(typeof(Rebar)).ToElementIds().Select(id => id.Value));
+            List<Rebar> Created() => new FilteredElementCollector(doc).OfClass(typeof(Rebar)).Cast<Rebar>()
+                .Where(r => !before.Contains(r.Id.Value)).ToList();
+
+            string report;
+            try
+            {
+                report = settings.Run(uidoc);
+            }
+            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+            {
+                throw new InvalidOperationException(
+                    "Nguoi dung da huy (Esc) khi pick mat - chua ve thanh thep nao.");
+            }
+            catch (Exception ex)
+            {
+                int made = Created().Count;
+                throw new InvalidOperationException(made == 0
+                    ? ex.Message
+                    : $"{ex.Message}\nDa tao {made} doi tuong Rebar o cac buoc truoc khi loi (moi buoc 1 " +
+                      "Transaction rieng - Ctrl+Z tung buoc de hoan tac).");
+            }
+
+            List<Rebar> created = Created();
+            JObject result = SummarizeRebars(doc, created);
+            result["report"] = report;
+            result["settings_used_mm"] = new JObject(DrawSettingProperties()
+                .Select(pi => new JProperty(pi.Name, (double)pi.GetValue(settings)!)));
+            result["created_ids_sample"] = new JArray(created.Take(50).Select(r => r.Id.Value));
+            return result;
+        }
+
+        private static void ApplyDrawSettings(RebarAllInOneSettings settings, JObject overrides)
+        {
+            var props = DrawSettingProperties().ToDictionary(pi => pi.Name, StringComparer.OrdinalIgnoreCase);
+            foreach (JProperty prop in overrides.Properties())
+            {
+                if (!props.TryGetValue(prop.Name, out PropertyInfo? pi))
+                    throw new InvalidOperationException(
+                        $"Thong so khong ton tai: '{prop.Name}'. Hop le: {string.Join(", ", props.Keys)}.");
+                if (prop.Value.Type != JTokenType.Integer && prop.Value.Type != JTokenType.Float)
+                    throw new InvalidOperationException($"'{prop.Name}' phai la so (mm).");
+
+                double value = prop.Value.Value<double>();
+                bool mustBePositive = pi.Name.StartsWith("Diam") || pi.Name.StartsWith("Space") || pi.Name == "CoverMm";
+                if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || (mustBePositive && value == 0))
+                    throw new InvalidOperationException($"Gia tri '{prop.Name}' = {value} khong hop le.");
+                pi.SetValue(settings, value);
+            }
+        }
+
+        // Giong thu tu tim cua ShapeDrivenOuterRebar.FindOrLoadRebarShape: co san trong
+        // model, hoac file .rfa canh DLL (chi kem theo ban build Revit 2027).
+        private static bool OuterShapeAvailable(Document doc)
+        {
+            bool inModel = new FilteredElementCollector(doc).OfClass(typeof(RebarShape)).Cast<RebarShape>()
+                .Any(rs => rs.Name.Trim().Equals(OuterShapeName, StringComparison.OrdinalIgnoreCase));
+            if (inModel)
+                return true;
+            string dllFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+            return File.Exists(Path.Combine(dllFolder, OuterShapeName + ".rfa"));
         }
 
         // ------------------------------------------------------------------ write

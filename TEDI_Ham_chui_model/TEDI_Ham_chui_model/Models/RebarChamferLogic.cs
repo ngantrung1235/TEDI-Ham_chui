@@ -13,7 +13,7 @@ namespace TEDI_Ham_chui_model.Models
     public static class RebarChamferLogic
     {
         // coverMm PHAI la CUNG gia tri (CoverMm + duong kinh Rebar_21) da dung de
-        // PrepareHosts() cho lenh nay - xem RebarAllInOneViewModel.Run(). Nguoi goi LUON
+        // PrepareHosts() cho lenh nay - xem RebarAllInOneSettings.Run(). Nguoi goi LUON
         // truyen du tham so, khong con gia tri mac dinh.
         // diamS2Mm: duong kinh thep Rebar_21 mat Nap ("S2") - dung de offset vi tri bat
         // dau doc Lv cua S5 mot khoang bang chinh duong kinh nay (xem ghi chu trong

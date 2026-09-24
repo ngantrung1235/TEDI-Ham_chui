@@ -180,11 +180,7 @@ namespace TEDI_Ham_chui_model.Models
                     curves.Add(Line.CreateBound(wallPt, napPt));
                     if (extendFt > MmToFt(1)) curves.Add(Line.CreateBound(napPt, napLegEnd));
 
-                    var terminations = new BarTerminationsData(d);
-                    var rebar = Rebar.CreateFromCurves(
-                        d, RebarStyle.Standard, bt, inst, Lv,
-                        curves, terminations,
-                        useExistingShapeIfPossible: false, createNewShape: true);
+                    var rebar = RebarCommon.CreateFromCurvesNoHooks(d, RebarStyle.Standard, bt, inst, Lv, curves);
 
                     if (rebar == null) continue;
                     rebar.GetShapeDrivenAccessor().SetLayoutAsSingle();

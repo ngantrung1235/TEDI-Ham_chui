@@ -483,8 +483,6 @@ namespace TEDI_Ham_chui_model.Models
                 for (double lp = lLo + lOffsetFt; lp <= lHi; lp += tieSpacingFt)
                     lPositions.Add(lp);
 
-                var terminations = new BarTerminationsData(doc);
-
                 foreach (double l in lPositions)
                 {
 
@@ -526,10 +524,8 @@ namespace TEDI_Ham_chui_model.Models
                         // 1 "l", nen mat phang bien dang thuc su vuong goc voi Lv tai diem
                         // do - khong con anh huong boi do xien cua Wv nhu khi rai bang
                         // SetLayoutAsNumberWithSpacing truoc day.
-                        var tieRebar = Rebar.CreateFromCurves(
-                            doc, RebarStyle.StirrupTie, tieBarType, h.Inst, h.Lv,
-                            tieCurves, terminations,
-                            useExistingShapeIfPossible: false, createNewShape: true);
+                        var tieRebar = RebarCommon.CreateFromCurvesNoHooks(
+                            doc, RebarStyle.StirrupTie, tieBarType, h.Inst, h.Lv, tieCurves);
 
                         if (tieRebar != null)
                         {

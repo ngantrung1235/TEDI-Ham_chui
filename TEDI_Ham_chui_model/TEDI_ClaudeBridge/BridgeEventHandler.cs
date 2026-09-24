@@ -11,6 +11,10 @@ namespace TEDI_ClaudeBridge
     {
         public string Method = "";
         public JObject Params = new JObject();
+        // Revit bat dau thuc thi (true) hoac server da huy vi cho qua lau (canceled) -
+        // ai dat truoc thang, nen khong co chuyen vua bao timeout vua van chay lenh.
+        public TaskCompletionSource<bool> Started =
+            new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<JToken?> Completion =
             new TaskCompletionSource<JToken?>(TaskCreationOptions.RunContinuationsAsynchronously);
     }
@@ -31,7 +35,7 @@ namespace TEDI_ClaudeBridge
             {
                 // Request da bi huy do het thoi gian cho (Revit ban lau) -> bo qua, KHONG
                 // thuc thi muon vi client da nhan loi timeout roi.
-                if (request.Completion.Task.IsCompleted)
+                if (!request.Started.TrySetResult(true))
                     continue;
 
                 try

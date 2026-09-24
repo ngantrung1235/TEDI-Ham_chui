@@ -199,17 +199,32 @@ namespace TEDI_Ham_chui_model.Models
             return (lo, hi);
         }
 
+        // Rebar.CreateFromCurves KHONG moc (hook) o 2 dau, chay duoc tren nhieu ban Revit:
+        // Revit 2025+ doi sang overload nhan BarTerminationsData (bo tham so hook rieng),
+        // Revit 2024 van dung overload cu voi startHook/endHook = null. Hang REVIT2024 chi
+        // duoc dinh nghia khi build cho Revit 2024 (TEDI_ClaudeBridge, net48).
+        public static Rebar CreateFromCurvesNoHooks(
+            Document d, RebarStyle style, RebarBarType bt, Element host, XYZ normal, IList<Curve> curves)
+        {
+#if REVIT2024
+            return Rebar.CreateFromCurves(
+                d, style, bt, null, null, host, normal, curves,
+                RebarHookOrientation.Left, RebarHookOrientation.Left,
+                useExistingShapeIfPossible: false, createNewShape: true);
+#else
+            return Rebar.CreateFromCurves(
+                d, style, bt, host, normal, curves, new BarTerminationsData(d),
+                useExistingShapeIfPossible: false, createNewShape: true);
+#endif
+        }
+
         // Tao 1 thanh DON LE (khong array) chay tu p1->p2.
         public static ElementId CreateSingleBar(
             Document d, RebarBarType bt, Element host,
             XYZ p1, XYZ p2, XYZ normal)
         {
             var curve = Line.CreateBound(p1, p2);
-            var terminations = new BarTerminationsData(d);
-            var rebar = Rebar.CreateFromCurves(
-                d, RebarStyle.Standard, bt, host, normal,
-                new List<Curve> { curve }, terminations,
-                useExistingShapeIfPossible: false, createNewShape: true);
+            var rebar = CreateFromCurvesNoHooks(d, RebarStyle.Standard, bt, host, normal, new List<Curve> { curve });
             if (rebar == null)
                 throw new InvalidOperationException($"CreateFromCurves (single) tra ve null. p1={p1} p2={p2}");
 
@@ -318,7 +333,7 @@ namespace TEDI_Ham_chui_model.Models
         // Xay FaceDef[4] (Day/Nap/Trai/Phai) tu 1 HostGeometry da pick san, THEO coverFt
         // rieng cua tung lenh goi (cac lenh dung coverFt khac nhau - vd RebarOuterShapeLogic
         // dung DefaultCoverMm, cac lenh con lai dung cover da cong them duong kinh Rebar_21,
-        // tinh boi RebarAllInOneViewModel.Run() tu CoverMm nguoi dung nhap).
+        // tinh boi RebarAllInOneSettings.Run() tu CoverMm nguoi dung nhap).
         //
         // CrossMin/CrossMax (hang dau/cuoi duoc phep cach mep bao nhieu doc theo mat) PHAI
         // dung CUNG coverFt (co the da cong them duong kinh Rebar_21)
