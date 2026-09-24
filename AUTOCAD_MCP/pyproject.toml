@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autocad-mcp"
+version = "0.1.0"
+description = "MCP server linking Claude Code with AutoCAD (2000-2026 via COM) and DXF files (ezdxf)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.2",
+    "ezdxf>=1.1",
+    "pywin32>=305; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+preview = ["matplotlib>=3.7"]
+test = ["pytest>=7"]
+all = ["matplotlib>=3.7", "pytest>=7"]
+
+[project.scripts]
+autocad-mcp = "autocad_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
