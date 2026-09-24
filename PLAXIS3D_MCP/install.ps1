@@ -40,9 +40,21 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
     & $py[0] @pyArgs
 }
 $exe = Join-Path $root ".venv\Scripts\python.exe"
-& $exe -m pip install --upgrade pip | Out-Null
-& $exe -m pip install -e ".[all]"
-if ($LASTEXITCODE -ne 0) { throw "pip install that bai" }
+$wheels = Join-Path $root "wheels"
+$installed = $false
+if (Test-Path $wheels) {
+    # Offline: all dependencies are bundled in .\wheels (Python 3.11 - 3.13, Windows x64)
+    Write-Host "    cai offline tu thu muc wheels"
+    & $exe -m pip install --no-index --find-links $wheels --upgrade pip | Out-Null
+    & $exe -m pip install --no-index --find-links $wheels -e ".[all]"
+    $installed = ($LASTEXITCODE -eq 0)
+    if (-not $installed) { Write-Host "    offline that bai (phien ban Python khac?) -> cai online" -ForegroundColor Yellow }
+}
+if (-not $installed) {
+    & $exe -m pip install --upgrade pip | Out-Null
+    & $exe -m pip install -e ".[all]"
+    if ($LASTEXITCODE -ne 0) { throw "pip install that bai" }
+}
 
 # 3. tests
 Step "Chay kiem thu"
