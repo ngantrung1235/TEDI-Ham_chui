@@ -1,0 +1,88 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    OTDMcpBridge - add-in .NET chay BEN TRONG OpenTunnel Designer 2026 (26.00.00.83).
+
+    Runtime .NET cua OTD phu thuoc nen MicroStation di kem:
+      - net48           : nen MicroStation chay tren .NET Framework 4.8 (co file *.exe.config canh exe)
+      - net8.0-windows  : nen MicroStation chay tren .NET 8+ (co file *.runtimeconfig.json canh exe)
+    Chay scripts\detect_runtime.ps1 de biet chinh xac, roi build:
+      dotnet build -c Release -p:OtdInstallDir="C:\...\OpenTunnelDesigner\" -p:OtdTargetFramework=net48
+  -->
+  <PropertyGroup>
+    <OtdTargetFramework Condition="'$(OtdTargetFramework)' == ''">net48</OtdTargetFramework>
+    <TargetFramework>$(OtdTargetFramework)</TargetFramework>
+    <OtdInstallDir Condition="'$(OtdInstallDir)' == ''">C:\Program Files\Bentley\OpenTunnel Designer 2026\OpenTunnelDesigner\</OtdInstallDir>
+    <OtdInstallDir Condition="!HasTrailingSlash('$(OtdInstallDir)')">$(OtdInstallDir)\</OtdInstallDir>
+
+    <AssemblyName>OTDMcpBridge</AssemblyName>
+    <RootNamespace>OTDMcpBridge</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWindowsForms Condition="'$(OtdTargetFramework)' != 'net48'">true</UseWindowsForms>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <!-- Thu vien Bentley: tham chieu tu thu muc cai dat, KHONG copy ra (Private=False) -->
+  <ItemGroup>
+    <Reference Include="ustation">
+      <HintPath>$(OtdInstallDir)ustation.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.DgnPlatformNET">
+      <HintPath>$(OtdInstallDir)Bentley.DgnPlatformNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.GeometryNET">
+      <HintPath>$(OtdInstallDir)Bentley.GeometryNET.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.GeometryNET.Structs">
+      <HintPath>$(OtdInstallDir)Bentley.GeometryNET.Structs.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.ECObjects3">
+      <HintPath>$(OtdInstallDir)Bentley.ECObjects3.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.General.1.0" Condition="Exists('$(OtdInstallDir)Bentley.General.1.0.dll')">
+      <HintPath>$(OtdInstallDir)Bentley.General.1.0.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.MicroStation.Interfaces.1.0" Condition="Exists('$(OtdInstallDir)Bentley.MicroStation.Interfaces.1.0.dll')">
+      <HintPath>$(OtdInstallDir)Bentley.MicroStation.Interfaces.1.0.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.Interop.MicroStationDGN" Condition="Exists('$(OtdInstallDir)Assemblies\Bentley.Interop.MicroStationDGN.dll')">
+      <HintPath>$(OtdInstallDir)Assemblies\Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Bentley.Interop.MicroStationDGN" Condition="!Exists('$(OtdInstallDir)Assemblies\Bentley.Interop.MicroStationDGN.dll')">
+      <HintPath>$(OtdInstallDir)Bentley.Interop.MicroStationDGN.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OtdTargetFramework)' == 'net48'">
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.11.0" />
+  </ItemGroup>
+
+  <!-- Bang key-in OTDMCP START/STOP/STATUS (ten resource phai trung voi AddInAttribute.KeyinTree) -->
+  <ItemGroup>
+    <EmbeddedResource Include="commands.xml" LogicalName="OTDMcpBridge.commands.xml" />
+  </ItemGroup>
+
+</Project>

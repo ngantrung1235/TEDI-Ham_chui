@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<KeyinTree xmlns="http://www.bentley.com/schemas/1.0/MicroStation/AddIn/KeyinTree.xsd">
+  <RootKeyinTable ID="root">
+    <Keyword SubtableRef="OTDMCP" CommandClass="MacroCommand" CommandWord="OTDMCP">
+      <Options Required="true" />
+    </Keyword>
+  </RootKeyinTable>
+
+  <SubKeyinTables>
+    <KeyinTable ID="OTDMCP">
+      <Keyword CommandWord="START" />
+      <Keyword CommandWord="STOP" />
+      <Keyword CommandWord="STATUS" />
+    </KeyinTable>
+  </SubKeyinTables>
+
+  <KeyinHandlers>
+    <KeyinHandler Keyin="OTDMCP START" Function="OTDMcpBridge.KeyinCommands.Start" />
+    <KeyinHandler Keyin="OTDMCP STOP" Function="OTDMcpBridge.KeyinCommands.Stop" />
+    <KeyinHandler Keyin="OTDMCP STATUS" Function="OTDMcpBridge.KeyinCommands.Status" />
+  </KeyinHandlers>
+</KeyinTree>
