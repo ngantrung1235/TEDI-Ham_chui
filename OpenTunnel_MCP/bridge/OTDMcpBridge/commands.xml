@@ -15,8 +15,8 @@
   </SubKeyinTables>
 
   <KeyinHandlers>
-    <KeyinHandler Keyin="OTDMCP START" Function="OTDMcpBridge.KeyinCommands.Start" />
-    <KeyinHandler Keyin="OTDMCP STOP" Function="OTDMcpBridge.KeyinCommands.Stop" />
-    <KeyinHandler Keyin="OTDMCP STATUS" Function="OTDMcpBridge.KeyinCommands.Status" />
+    <KeyinHandler Keyin="OTDMCP START" Function="BentleyMcp.KeyinCommands.Start" />
+    <KeyinHandler Keyin="OTDMCP STOP" Function="BentleyMcp.KeyinCommands.Stop" />
+    <KeyinHandler Keyin="OTDMCP STATUS" Function="BentleyMcp.KeyinCommands.Status" />
   </KeyinHandlers>
 </KeyinTree>

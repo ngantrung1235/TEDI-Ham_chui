@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    OBDMcpBridge - add-in .NET chay BEN TRONG OpenBridge Designer 2026 (26.00.00.142).
+    Ma nguon chung nam o Bentley_MCP_Core\bridge (import ben duoi).
+    Build: ..\..\scripts\build_bridge.ps1   (tu do runtime .NET va thu muc cai)
+       hoac dotnet build -c Release -p:BentleyInstallDir="C:\...\OpenBridgeDesigner\" -p:BentleyTargetFramework=net48
+  -->
+  <PropertyGroup>
+    <AssemblyName>OBDMcpBridge</AssemblyName>
+    <Version>0.2.0</Version>
+    <BentleyInstallDir Condition="'$(BentleyInstallDir)' == ''">C:\Program Files\Bentley\OpenBridge Designer 2026\OpenBridgeDesigner\</BentleyInstallDir>
+  </PropertyGroup>
+
+  <Import Project="..\..\..\Bentley_MCP_Core\bridge\BentleyMcp.Core.props" />
+
+  <!-- Bang key-in OBDMCP START/STOP/STATUS (ten resource phai trung voi AddInAttribute.KeyinTree) -->
+  <ItemGroup>
+    <EmbeddedResource Include="commands.xml" LogicalName="OBDMcpBridge.commands.xml" />
+  </ItemGroup>
+
+</Project>
