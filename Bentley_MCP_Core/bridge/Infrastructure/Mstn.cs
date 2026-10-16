@@ -5,6 +5,8 @@ using Bentley.GeometryNET;
 using Bentley.MstnPlatformNET;
 using Newtonsoft.Json.Linq;
 using BIM = Bentley.Interop.MicroStationDGN;
+using McpBridge;
+using McpBridge.Infrastructure;
 
 namespace BentleyMcp.Infrastructure
 {

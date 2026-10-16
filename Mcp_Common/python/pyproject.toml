@@ -1,0 +1,23 @@
+[project]
+name = "mcp-bridge-common"
+version = "0.1.0"
+description = "Phan trung lap dung chung cho MCP server dieu khien phan mem Windows qua add-in bridge (Bentley, Navisworks...)"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.2",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_bridge_common"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

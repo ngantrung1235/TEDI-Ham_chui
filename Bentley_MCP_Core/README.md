@@ -9,7 +9,11 @@ MicroStation/OpenRoads bằng Claude:
 | OpenBridge Designer 2026 | [`OpenBridge_MCP/`](../OpenBridge_MCP) | 26.00.00.142 | `obd_` | `OBDMcpBridge` / `OBDMCP` | 8766 |
 
 Mỗi sản phẩm dùng cổng, file discovery và biến môi trường riêng, nên **chạy song song được trên
-cùng một máy**. Sửa một lỗi ở thư mục này là áp dụng cho mọi sản phẩm.
+cùng một máy**. Sửa một lỗi ở thư mục này là áp dụng cho mọi sản phẩm Bentley.
+
+> **Phân tầng:** phần *không phụ thuộc hãng* (HTTP loopback + token, hàng đợi UI thread, script Roslyn, chụp màn hình, dò API,
+> client Python, đăng ký tool) nằm ở [`Mcp_Common`](../Mcp_Common/README.md) và cũng được dùng bởi Navisworks. Thư mục này chỉ
+> còn phần **riêng của MicroStation/OpenRoads**: session/level/element/EC/key-in/hình học và đặc trưng tiết diện.
 
 ## 1. Kiến trúc
 
@@ -28,17 +32,19 @@ cùng một máy**. Sửa một lỗi ở thư mục này là áp dụng cho m�
 ### Cấu trúc mã nguồn
 ```
 Bentley_MCP_Core/
-├── bridge/                      C# dùng chung (namespace BentleyMcp)
-│   ├── BentleyMcp.Core.props    MSBuild: tham chiếu DLL Bentley, NuGet, gom mã nguồn chung
-│   ├── BridgeAddIn.cs           điểm vào add-in (tên lấy từ ProductInfo của từng sản phẩm)
+├── bridge/                      C# riêng của MicroStation (namespace BentleyMcp)
+│   ├── BentleyMcp.Core.props    MSBuild: import Mcp_Common + tham chiếu DLL Bentley
+│   ├── BridgeAddIn.cs           điểm vào add-in (AddIn.Run; tên lấy từ ProductInfo của từng sản phẩm)
 │   ├── KeyinCommands.cs         <KEYIN> START | STOP | STATUS
-│   ├── Infrastructure/          HTTP loopback, token, MainThread, đổi đơn vị, JSON
-│   └── Handlers/                session, level, element, EC, key-in, hình học, chụp màn hình, script, dò API
+│   ├── BentleyHandlers.cs       RegisterAll(): đăng ký handler Bentley + script (biến Session, ActiveModel, App…) + Notify
+│   ├── Infrastructure/Mstn.cs   truy cập session/model/COM, đổi đơn vị UOR ↔ mét
+│   └── Handlers/                session, level, element, EC, key-in, hình học
 ├── python/                      package bentley_mcp_core
-│   └── src/bentley_mcp_core/    bridge_client, common_tools, sections, guide, compat, testing
+│   └── src/bentley_mcp_core/    common_tools (tool riêng MicroStation), sections, guide
 └── scripts/build_bridge.ps1     dò runtime .NET, build và cài add-in (được script của sản phẩm gọi)
 ```
-Project của mỗi sản phẩm chỉ có `ProductInfo.cs`, `commands.xml` và `.csproj` (import `BentleyMcp.Core.props`).
+Project của mỗi sản phẩm chỉ có `ProductInfo.cs` (namespace `McpBridge`), `commands.xml` và `.csproj` (import `BentleyMcp.Core.props`).
+Hạ tầng trung lập (`MainThread`, `BridgeHost`, `ScriptHandlers`, `ViewHandlers`, `ApiHandlers`…) lấy từ `Mcp_Common/bridge`.
 
 ### Vì sao chọn "add-in C# trong sản phẩm + MCP Python"?
 
@@ -102,7 +108,7 @@ tiết diện/cấu kiện tính bằng **mm**.
 
 ## 5. Trạng thái kiểm thử và lưu ý khi build lần đầu
 
-- **Python:** lõi chung có 11 test, OTD có 17, OBD có 22. Đã chạy qua trên `mcp` 2.2. Trên `mcp`
+- **Python:** `Mcp_Common` 6 test, `Bentley_MCP_Core` 5, OTD 17, OBD 22. Đã chạy qua trên `mcp` 2.2. Trên `mcp`
   1.30, các test gọi tool in-process bị bỏ qua (`mcp.Client` chỉ có từ bản 2.x), còn lại đều qua;
   việc đăng ký tool trên 1.30 được kiểm thử khói riêng. Chạy test: `uv run --extra dev pytest`
   trong từng thư mục `python/` hoặc `server/`.
@@ -115,5 +121,8 @@ tiết diện/cấu kiện tính bằng **mm**.
   - `DgnECManager.Manager.GetElementProperties`, `IECArrayValue`, `SelectionSetManager.AddElement/EmptyAll`
     → `bridge/Handlers/ElementHandlers.cs`, `EcHandlers.cs`
   - `AddIn.OnUnloading` → `bridge/BridgeAddIn.cs`
+  - `Bentley.MstnPlatformNET.InteropServices.Utilities.ComApp` → `bridge/BentleyHandlers.cs`
+- **Biên dịch thử trên stub (mới):** `Mcp_Common/tools/csharp-check/check.sh` biên dịch cả lõi Bentley, OTD, OBD bằng Mono
+  trên stub SDK. Nó xác nhận mạch lạc nội bộ sau lần tách `Mcp_Common`, **không** kiểm chứng chữ ký API Bentley thật.
 - Script C# đã biên dịch sẽ nằm lại trong bộ nhớ đến khi tắt chương trình (giới hạn của .NET khi
   không dùng AssemblyLoadContext riêng). Với vài trăm lần chạy thì không đáng kể.

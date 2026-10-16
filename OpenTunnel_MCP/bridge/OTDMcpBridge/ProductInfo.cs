@@ -1,8 +1,8 @@
-using BentleyMcp.Infrastructure;
+using McpBridge.Infrastructure;
 
-namespace BentleyMcp
+namespace McpBridge
 {
-    // Thong so rieng cua san pham ma ma nguon chung (Bentley_MCP_Core\bridge) tham chieu.
+    // Thong so rieng cua san pham ma ma nguon chung (Mcp_Common\bridge, Bentley_MCP_Core\bridge) tham chieu.
     internal static class ProductInfo
     {
         public const string Name = "OpenTunnel Designer 2026";
@@ -13,9 +13,13 @@ namespace BentleyMcp
         public const string DiscoveryFolder = "OTDMcp";   // %LOCALAPPDATA%\OTDMcp\bridge.json + bridge.log
         public const int DefaultPort = 8765;
 
-        // Handler rieng cua OpenTunnel (hien chua co - moi thu tunnel di qua key-in/EC/script).
+        // Dang ky handler Bentley dung chung; handler rieng cua san pham them o day neu can.
         public static void RegisterProductHandlers(RpcRegistry r)
         {
+            BentleyMcp.BentleyHandlers.RegisterAll(r);
         }
+
+        public static void Notify(string message, string detail, bool isError) =>
+            BentleyMcp.BentleyHandlers.Notify(message, detail, isError);
     }
 }

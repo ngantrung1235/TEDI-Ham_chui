@@ -2,16 +2,16 @@
 
 Chay: `otd-mcp` (stdio). Server nay chi la lop dich MCP <-> HTTP; moi thao tac that su
 thuc hien trong add-in OTDMcpBridge nap ben trong OpenTunnel Designer. Cac tool chung
-(otd_status, otd_send_keyins, otd_run_csharp...) nam o bentley_mcp_core.common_tools.
+(otd_status, otd_send_keyins, otd_run_csharp...) nam o bentley_mcp_core.common_tools va mcp_bridge_common.registry.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from bentley_mcp_core import BridgeClient
+from mcp_bridge_common import BridgeClient
 from bentley_mcp_core.common_tools import SectionPlane, register_common_tools
-from bentley_mcp_core.compat import WRITE, MCPServer, ToolError
+from mcp_bridge_common.compat import WRITE, MCPServer, ToolError
 from bentley_mcp_core.guide import common_guide
 from bentley_mcp_core.sections import section_properties
 

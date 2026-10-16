@@ -1,6 +1,6 @@
 """MCP server cho Bentley OpenBridge Designer 2026 (qua add-in OBDMcpBridge)."""
 
-from bentley_mcp_core import ProductConfig
+from mcp_bridge_common import ProductConfig
 
 __version__ = "0.2.0"
 

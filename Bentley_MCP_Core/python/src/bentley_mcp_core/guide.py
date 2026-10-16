@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .product import ProductConfig
+from mcp_bridge_common import ProductConfig
 
 _COMMON = r"""
 # Hướng dẫn điều khiển {name} qua MCP

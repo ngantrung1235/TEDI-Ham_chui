@@ -6,6 +6,8 @@ using Bentley.DgnPlatformNET.Elements;
 using Bentley.GeometryNET;
 using Newtonsoft.Json.Linq;
 using BentleyMcp.Infrastructure;
+using McpBridge;
+using McpBridge.Infrastructure;
 
 namespace BentleyMcp.Handlers
 {

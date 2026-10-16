@@ -1,6 +1,8 @@
 using Newtonsoft.Json.Linq;
 using BentleyMcp.Infrastructure;
 using BIM = Bentley.Interop.MicroStationDGN;
+using McpBridge;
+using McpBridge.Infrastructure;
 
 namespace BentleyMcp.Handlers
 {

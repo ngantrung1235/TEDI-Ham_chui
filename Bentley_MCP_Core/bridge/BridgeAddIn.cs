@@ -1,7 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using Bentley.MstnPlatformNET;
-using BentleyMcp.Infrastructure;
+using McpBridge;
+using McpBridge.Infrastructure;
 
 namespace BentleyMcp
 {

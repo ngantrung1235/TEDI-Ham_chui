@@ -1,5 +1,6 @@
 using Bentley.MstnPlatformNET;
-using BentleyMcp.Infrastructure;
+using McpBridge;
+using McpBridge.Infrastructure;
 
 namespace BentleyMcp
 {

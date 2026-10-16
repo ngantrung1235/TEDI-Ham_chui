@@ -17,19 +17,16 @@
     <BentleyInstallDir Condition="!HasTrailingSlash('$(BentleyInstallDir)')">$(BentleyInstallDir)\</BentleyInstallDir>
 
     <RootNamespace>BentleyMcp</RootNamespace>
-    <LangVersion>latest</LangVersion>
-    <Nullable>disable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <PlatformTarget>x64</PlatformTarget>
-    <UseWindowsForms Condition="'$(BentleyTargetFramework)' != 'net48'">true</UseWindowsForms>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
-  <!-- Ma nguon chung (Infrastructure, Handlers, KeyinCommands) -->
+  <!-- Phan trung lap dung chung (HTTP, main thread, script, chup man hinh...) -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\Mcp_Common\bridge\McpBridge.Common.props" />
+
+  <!-- Ma nguon Bentley (BridgeAddIn, KeyinCommands, BentleyHandlers, Infrastructure\Mstn, Handlers) -->
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)**\*.cs"
              Exclude="$(MSBuildThisFileDirectory)**\obj\**;$(MSBuildThisFileDirectory)**\bin\**"
-             LinkBase="Core" />
+             LinkBase="BentleyCore" />
   </ItemGroup>
 
   <!-- Thu vien Bentley: tham chieu tu thu muc cai dat, KHONG copy ra (Private=False) -->
@@ -72,18 +69,6 @@
       <EmbedInteropTypes>False</EmbedInteropTypes>
       <Private>False</Private>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(BentleyTargetFramework)' == 'net48'">
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="Microsoft.CSharp" />
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.11.0" />
   </ItemGroup>
 
 </Project>

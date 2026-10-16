@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from bentley_mcp_core.testing import FakeBridge
+from mcp_bridge_common.testing import FakeBridge
 from otd_mcp.server import create_server
 
 

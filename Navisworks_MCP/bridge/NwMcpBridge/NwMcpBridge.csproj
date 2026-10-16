@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    NwMcpBridge - plugin .NET chay BEN TRONG Navisworks Manage 2025.
+    Navisworks 2025 chay tren .NET Framework 4.8 (net48). Ma nguon trung lap nam o Mcp_Common\bridge
+    (HTTP loopback, main thread, script Roslyn, chup man hinh, do API) - import ben duoi.
+
+    Build: ..\..\scripts\build_bridge.ps1   (tu tim thu muc cai tu shortcut .lnk, build, cai plugin)
+       hoac dotnet build -c Release -p:NavisworksDir="C:\Program Files\Autodesk\Navisworks Manage 2025\"
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>NwMcpBridge</AssemblyName>
+    <RootNamespace>NwMcp</RootNamespace>
+    <Version>0.1.0</Version>
+    <NavisworksDir Condition="'$(NavisworksDir)' == ''">C:\Program Files\Autodesk\Navisworks Manage 2025\</NavisworksDir>
+    <NavisworksDir Condition="!HasTrailingSlash('$(NavisworksDir)')">$(NavisworksDir)\</NavisworksDir>
+  </PropertyGroup>
+
+  <Import Project="..\..\..\Mcp_Common\bridge\McpBridge.Common.props" />
+
+  <!-- Chi can Autodesk.Navisworks.Api; Clash/TimeLiner/ComApi duoc script nap luc chay (PreloadAssemblies) -->
+  <ItemGroup>
+    <Reference Include="Autodesk.Navisworks.Api">
+      <HintPath>$(NavisworksDir)Autodesk.Navisworks.Api.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

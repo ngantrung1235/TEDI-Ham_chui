@@ -2,24 +2,20 @@
 
 from __future__ import annotations
 
-import base64
 import time
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
-from .bridge_client import BridgeClient
-from .compat import DESTRUCTIVE, READ, WRITE, Image, MCPServer, ToolError
-from .product import ProductConfig
+from mcp_bridge_common import BridgeClient, ProductConfig
+from mcp_bridge_common.compat import DESTRUCTIVE, READ, WRITE, MCPServer, ToolError
+from mcp_bridge_common.registry import make_tool, register_generic_tools
+
 from .sections import section_properties
 
 SectionPlane = Literal["vertical", "perpendicular"]
 
 
 def register_common_tools(mcp: MCPServer, bridge: BridgeClient, product: ProductConfig) -> None:
-    prefix, pname = product.tool_prefix, product.name
-
-    def tool(suffix: str, annotations, description: str) -> Callable:
-        return mcp.tool(name=f"{prefix}_{suffix}", annotations=annotations,
-                        description=description.format(product=pname, p=prefix))
+    tool = make_tool(mcp, product)
 
     # ------------------------------------------------------------------ phiên làm việc
     @tool("status", READ, "Trạng thái bridge + thông tin phiên {product}: file/model/level active, "
@@ -146,35 +142,6 @@ def register_common_tools(mcp: MCPServer, bridge: BridgeClient, product: Product
         except (ValueError, KeyError, TypeError) as exc:
             raise ToolError(f"Tiết diện không hợp lệ: {exc}") from exc
 
-    # ------------------------------------------------------------------ hiển thị
-    @tool("capture_view", READ,
-          "Chụp màn hình cửa sổ {product} (PNG) để kiểm tra trực quan. fit=True: 'fit view extended' rồi chụp.")
-    def capture_view(fit: bool = False, max_width: int = 1600) -> Image:
-        if fit:
-            bridge.call("keyin.send", {"keyins": ["fit view extended"]})
-            time.sleep(1.0)
-        shot = bridge.call("view.capture", {"max_width": max_width})
-        return Image(data=base64.b64decode(shot["data_base64"]), format="png")
-
-    # ------------------------------------------------------------------ API nâng cao
-    @tool("explore_api", READ,
-          "Dò API .NET đang nạp trong {product} bằng reflection. Chỉ assembly_filter → danh sách assembly; "
-          "có type_filter → type public (+ chữ ký member nếu include_members). Dùng TRƯỚC {p}_run_csharp.")
-    def explore_api(assembly_filter: str | None = None, type_filter: str | None = None,
-                    include_members: bool = False, limit: int = 100) -> list[dict[str, Any]]:
-        if type_filter is None and not include_members:
-            return bridge.call("api.assemblies", {"filter": assembly_filter})
-        return bridge.call("api.types", {"assembly_filter": assembly_filter, "type_filter": type_filter,
-                                         "include_members": include_members, "limit": limit})
-
-    @tool("run_csharp", DESTRUCTIVE,
-          "Biên dịch & chạy C# script BÊN TRONG {product} trên main thread, tham chiếu mọi assembly đang nạp. "
-          "Biến có sẵn: Session, ActiveFile, ActiveModel, App (COM Interop), UorPerMeter, Print(x). Giá trị biểu "
-          "thức cuối → return_value; Print → output; lỗi biên dịch → errors. Script chặn giao diện khi chạy.")
-    def run_csharp(code: str, imports: list[str] | None = None, timeout_s: float = 120) -> dict[str, Any]:
-        return bridge.call("script.csharp", {"code": code, "imports": imports or [], "timeout_s": timeout_s},
-                           timeout_s=timeout_s + 30)
-
-    @tool("bridge_methods", READ, "(Chẩn đoán) Danh sách method RPC mà add-in bridge cung cấp.")
-    def bridge_methods() -> list[dict[str, Any]]:
-        return bridge.call("rpc.list")
+    # ------------------------------------------------------------------ dùng chung với mọi phần mềm
+    register_generic_tools(mcp, bridge, product,
+                           fit_view=lambda: bridge.call("keyin.send", {"keyins": ["fit view extended"]}))

@@ -3,6 +3,8 @@ using System.IO;
 using Newtonsoft.Json.Linq;
 using BentleyMcp.Infrastructure;
 using BIM = Bentley.Interop.MicroStationDGN;
+using McpBridge;
+using McpBridge.Infrastructure;
 
 namespace BentleyMcp.Handlers
 {
@@ -10,8 +12,6 @@ namespace BentleyMcp.Handlers
     {
         public static void Register(RpcRegistry r)
         {
-            r.Add("ping", false, "Kiem tra bridge con song", p => BridgeHost.Health());
-
             r.Add("session.info", true, "File/model active, phien ban, don vi", p => Info());
 
             r.Add("file.open", true, "Mo file DGN (path, read_only)", p =>

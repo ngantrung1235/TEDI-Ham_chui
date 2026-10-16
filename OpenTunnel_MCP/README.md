@@ -32,7 +32,7 @@ Resource `otd://guide` là hướng dẫn chiến lược cho LLM.
 - Windows và OpenTunnel Designer 2026 (26.00.00.83).
 - .NET SDK 8+ (dùng để build; với target net48 cần thêm .NET Framework 4.8 Developer Pack).
 - Python ≥ 3.10 và [uv](https://docs.astral.sh/uv/) (khuyến nghị).
-- Giữ nguyên cấu trúc repo: `OpenTunnel_MCP/` phải nằm cạnh `Bentley_MCP_Core/`.
+- Giữ nguyên cấu trúc repo: `OpenTunnel_MCP/` phải nằm cạnh `Bentley_MCP_Core/` và `Mcp_Common/`.
 
 ### 2.2 Build và cài add-in bridge
 ```powershell
@@ -57,7 +57,7 @@ của add-in: `OTDMCP STATUS | START | STOP`.
 cd OpenTunnel_MCP\server
 uv sync            # tự cài cả bentley-mcp-core từ ..\..\Bentley_MCP_Core\python
 uv run otd-mcp     # thử chạy (stdio): Ctrl+C để thoát
-# Không có uv:  pip install -e ..\..\Bentley_MCP_Core\python -e .
+# Không có uv:  pip install -e ..\..\Mcp_Common\python -e ..\..\Bentley_MCP_Core\python -e .
 ```
 **Claude Desktop**, file `%APPDATA%\Claude\claude_desktop_config.json`:
 ```json

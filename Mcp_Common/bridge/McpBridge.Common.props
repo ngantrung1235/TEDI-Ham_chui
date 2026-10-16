@@ -1,0 +1,36 @@
+<Project>
+
+  <!--
+    Phan TRUNG LAP cua add-in MCP bridge (khong phu thuoc hang): HTTP loopback, token, hang doi
+    main thread, script C# (Roslyn), chup man hinh, do API bang reflection.
+    Project san pham import file nay (truc tiep hoac qua props cua nhom: BentleyMcp.Core.props...)
+    va PHAI cung cap trong assembly cua minh class  McpBridge.ProductInfo  (xem README).
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWindowsForms Condition="'$(TargetFramework)' != 'net48'">true</UseWindowsForms>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)**\*.cs"
+             Exclude="$(MSBuildThisFileDirectory)**\obj\**;$(MSBuildThisFileDirectory)**\bin\**"
+             LinkBase="McpCommon" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.11.0" />
+  </ItemGroup>
+
+</Project>

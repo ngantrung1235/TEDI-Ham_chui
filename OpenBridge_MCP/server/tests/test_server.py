@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from bentley_mcp_core.testing import FakeBridge
+from mcp_bridge_common.testing import FakeBridge
 from obd_mcp.server import create_server
 
 mcp_client = pytest.importorskip("mcp").__dict__.get("Client")
